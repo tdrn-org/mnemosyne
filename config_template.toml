@@ -1,0 +1,26 @@
+#
+# mnemosyne configuration file
+#
+
+#
+# Logging configuration (level, target, format, ...)
+#
+# level: log level (debug|info|warn|error)
+# target: log target (see https://pkg.go.dev/github.com/tdrn-org/go-log#Target)
+# color: color mode (auto|off|on)
+# file_name: log file to use (in case of a file related log target)
+# file_size_limit: log file rotation limit (0 means no rotation)
+# syslog_network: network type to use for syslog logging (in case of syslog log target)
+# syslog_address: syslog server address
+# syslog_encoding: syslog message format (rfc3164|rfc3164+framing|rfc5424|rfc5424+framing)
+# syslog_facility: syslog facility 0-23 (see https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1)
+[logging]
+#level = "info"
+#target = "stdout"
+#color = "auto"
+#file_name = "./mnemosyne.log"
+#file_size_limit = 0
+#syslog_network = "tcp"
+#syslog_address = "localhost:601"
+#syslog_encoding = "rfc5424"
+#syslog_facility = 4
