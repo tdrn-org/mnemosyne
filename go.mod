@@ -20,8 +20,11 @@ require (
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	golang.org/x/crypto v0.53.0 // indirect
 	golang.org/x/net v0.56.0 // indirect
-	golang.org/x/oauth2 v0.35.0 // indirect
+	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/text v0.38.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260427160629-7cedc36a6bc4 // indirect
+	google.golang.org/grpc v1.81.1 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
@@ -30,9 +33,10 @@ require (
 	github.com/alecthomas/kong v1.16.0
 	github.com/mattn/go-isatty v0.0.22 // indirect
 	github.com/modelcontextprotocol/go-sdk v1.6.1
+	github.com/qdrant/go-client v1.18.3
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.11.1
-	github.com/tdrn-org/go-conf v0.0.6 // indirect
+	github.com/tdrn-org/go-conf v0.0.6
 	github.com/tdrn-org/go-diff v0.1.3
 	github.com/tdrn-org/go-httpserver v0.1.1
 	github.com/tdrn-org/go-tlsconf v0.0.10 // indirect
