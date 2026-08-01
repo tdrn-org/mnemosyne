@@ -2,7 +2,11 @@ module github.com/tdrn-org/mnemosyne
 
 go 1.26.5
 
-require github.com/tdrn-org/go-log v0.5.7
+require (
+	github.com/google/uuid v1.6.0
+	github.com/tdrn-org/go-log v0.5.7
+	github.com/yuin/goldmark v1.8.5
+)
 
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

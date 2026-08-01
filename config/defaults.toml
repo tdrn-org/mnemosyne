@@ -20,3 +20,10 @@ trusted_headers = [ ]
 allowed_origins = [ ]
 access_log = ""
 access_log_size_limit = 0
+
+[vectordb]
+address = "localhost:6334"
+tls = false
+api_key = ""
+tenant = "mnemosyne"
+skip_compatibility_check = false

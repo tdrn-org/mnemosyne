@@ -16,17 +16,79 @@
 
 package vectordb
 
-import "github.com/qdrant/go-client/qdrant"
+import (
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"net"
+	"strconv"
 
-type Connection struct {
+	"github.com/qdrant/go-client/qdrant"
+	"github.com/tdrn-org/mnemosyne/config"
+)
+
+type Store struct {
 	client *qdrant.Client
+	tenant string
+	logger *slog.Logger
 }
 
-func Open() (*Connection, error) {
-	connection := &Connection{}
-	return connection, nil
+func Open(cfg *config.VectorDBConfig, reset bool) (*Store, error) {
+	client, err := qdrant.NewClient(qdrantConfig(cfg))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Qdrant client (cause: %w)", err)
+	}
+	store := &Store{
+		client: client,
+		tenant: cfg.Tenant,
+		logger: slog.With(slog.String("vectordb", "qdrant"), slog.String("address", cfg.Address)),
+	}
+	err = store.init(context.Background(), reset)
+	if err != nil {
+		return nil, errors.Join(err, store.Close())
+	}
+	return store, nil
 }
 
-func (c *Connection) Close() error {
-	return c.client.Close()
+func qdrantConfig(cfg *config.VectorDBConfig) *qdrant.Config {
+	host, portString, err := net.SplitHostPort(cfg.Address)
+	port := 0
+	if err == nil {
+		port, err = strconv.Atoi(portString)
+		if err != nil {
+			host = cfg.Address
+		}
+	}
+	config := &qdrant.Config{
+		Host:                   host,
+		Port:                   port,
+		APIKey:                 cfg.APIKey,
+		UseTLS:                 cfg.TLS,
+		SkipCompatibilityCheck: cfg.SkipCompatibilityCheck,
+	}
+	return config
+}
+
+func (s *Store) init(ctx context.Context, reset bool) error {
+	err := s.initDocumentsCollection(ctx, reset)
+	if err != nil {
+		return err
+	}
+	err = s.initKnowledgeCollection(ctx, reset)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Store) Close() error {
+	return s.client.Close()
+}
+
+func (s *Store) collectionName(name string) string {
+	if s.tenant == "" {
+		return name
+	}
+	return s.tenant + "_" + name
 }

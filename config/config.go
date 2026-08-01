@@ -28,8 +28,9 @@ import (
 )
 
 type Config struct {
-	Logging LoggingConfig `toml:"logging"`
-	Server  ServerConfig  `toml:"server"`
+	Logging  LoggingConfig  `toml:"logging"`
+	Server   ServerConfig   `toml:"server"`
+	VectorDB VectorDBConfig `toml:"vectordb"`
 }
 
 //go:embed defaults.toml
