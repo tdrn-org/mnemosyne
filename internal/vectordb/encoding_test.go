@@ -50,7 +50,7 @@ func TestDecoding(t *testing.T) {
 			"bool_value":   true,
 		}),
 	}
-	err := vectordb.DecodeFromRetrievedPoint(v, point)
+	err := vectordb.DecodeFromPoint(v, point)
 	require.NoError(t, err)
 	require.Equal(t, point.Id.GetUuid(), v.ID)
 	require.Equal(t, point.Payload["string_value"].GetStringValue(), v.StringValue)

@@ -87,7 +87,7 @@ func (s *Store) LookupDocument(ctx context.Context, path string) (*domain.Docume
 		return nil, nil
 	}
 	document := &domain.Document{}
-	err = DecodeFromRetrievedPoint(document, res[0])
+	err = DecodeFromPoint(document, res[0])
 	if err != nil {
 		return nil, err
 	}

@@ -86,7 +86,7 @@ func (s *Store) SearchChunks(ctx context.Context, limit *uint64, vector ...float
 	chunks := make([]domain.Chunk, 0, len(res))
 	for _, found := range res {
 		chunk := &domain.Chunk{}
-		err = DecodeFromScoredPoint(chunk, found)
+		err = DecodeFromPoint(chunk, found)
 		if err != nil {
 			return nil, fmt.Errorf("failed to decode chunk query result (cause: %w)", err)
 		}
