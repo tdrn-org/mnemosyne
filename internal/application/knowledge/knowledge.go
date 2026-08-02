@@ -36,6 +36,8 @@ import (
 const TokenLimit int = 512
 
 type Knowledge struct {
+	store         *vectordb.Store
+	embedder      provider.Embedder
 	markdownSyncs []markdownSync
 	logger        *slog.Logger
 }
@@ -53,6 +55,8 @@ func NewKnowledge(cfg *config.KnowledgeConfig, store *vectordb.Store, tokenizer 
 		})
 	}
 	return &Knowledge{
+		store:         store,
+		embedder:      embedder,
 		markdownSyncs: markdownSyncs,
 		logger:        logger,
 	}
@@ -70,7 +74,27 @@ func (k *Knowledge) ListStores(ctx context.Context) ([]string, error) {
 }
 
 func (k *Knowledge) SearchStore(ctx context.Context, query string, store *string, limit *uint64) ([]domain.Chunk, error) {
-	return nil, nil
+	if k.store == nil || k.embedder == nil {
+		return nil, fmt.Errorf("knowledge store not initialized")
+	}
+	embedding, err := k.embedder.Embed(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("embedding query: %w", err)
+	}
+	chunks, err := k.store.SearchChunks(ctx, limit, embedding...)
+	if err != nil {
+		return nil, fmt.Errorf("searching chunks: %w", err)
+	}
+	if store != nil {
+		filtered := make([]domain.Chunk, 0, len(chunks))
+		for _, chunk := range chunks {
+			if chunk.Store == *store {
+				filtered = append(filtered, chunk)
+			}
+		}
+		chunks = filtered
+	}
+	return chunks, nil
 }
 
 func (k *Knowledge) Sync(ctx context.Context) {
@@ -98,7 +122,7 @@ func (s *markdownSync) Run(ctx context.Context) {
 	}
 }
 
-func (s *markdownSync) walkDir(ctx context.Context, path string, d fs.DirEntry, err error) error {
+func (s *markdownSync) walkDir(ctx context.Context, path string, d fs.DirEntry, _ error) error {
 	if !d.Type().IsRegular() {
 		return nil
 	}

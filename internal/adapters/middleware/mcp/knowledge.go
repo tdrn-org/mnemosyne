@@ -1,0 +1,78 @@
+/*
+ * Copyright 2026 Holger de Carne
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package mcp
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
+)
+
+func registerKnowledgeTools(server *mcp.Server, runtime Runtime) {
+	// list_stores: list known knowledge stores
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "list_stores",
+		Description: "Lists all known knowledge stores. Each store contains document chunks ingested from an external knowledge source (e.g. Obsidian). Call this first to discover available stores before searching.",
+		InputSchema: map[string]any{
+			"type":       "object",
+			"properties": map[string]any{},
+		},
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, input struct{}) (*mcp.CallToolResult, any, error) {
+		stores, err := runtime.Knowledge().ListStores(ctx)
+		if err != nil {
+			return nil, nil, fmt.Errorf("listing stores: %w", err)
+		}
+		text := fmt.Sprintf("Found %d store(s): %v", len(stores), stores)
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{&mcp.TextContent{Text: text}},
+		}, map[string]any{"stores": stores}, nil
+	})
+
+	// search_store: semantic search within a knowledge store
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "search_store",
+		Description: "Searches a knowledge store for the given query and returns matching document chunks. The store parameter is optional — when omitted, all stores are searched. Use list_stores first to discover available store names.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"query": map[string]any{"type": "string", "description": "The search query. Natural language is supported — the query is embedded and compared against chunk vectors via cosine similarity."},
+				"store": map[string]any{"type": "string", "description": "Optional store name to restrict the search to. Omit to search all stores."},
+				"limit": map[string]any{"type": "number", "description": "Optional maximum number of chunks to return (default: implementation-defined)."},
+			},
+			"required": []string{"query"},
+		},
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, input struct {
+		Query string  `json:"query"`
+		Store *string `json:"store"`
+		Limit *uint64 `json:"limit"`
+	}) (*mcp.CallToolResult, any, error) {
+		chunks, err := runtime.Knowledge().SearchStore(ctx, input.Query, input.Store, input.Limit)
+		if err != nil {
+			return nil, nil, fmt.Errorf("searching store: %w", err)
+		}
+		text := fmt.Sprintf("Found %d chunk(s)", len(chunks))
+		result := &mcp.CallToolResult{
+			Content: []mcp.Content{&mcp.TextContent{Text: text}},
+		}
+		var chunksMeta any
+		if len(chunks) > 0 {
+			chunksMeta = map[string]any{"chunks": chunks}
+		}
+		return result, chunksMeta, nil
+	})
+}

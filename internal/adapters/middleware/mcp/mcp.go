@@ -56,6 +56,8 @@ func NewHandler(runtime Runtime) http.Handler {
 		}
 	})
 
+	registerKnowledgeTools(server, runtime)
+
 	getServer := func(_ *http.Request) *mcp.Server {
 		return server
 	}

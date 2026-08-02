@@ -49,6 +49,7 @@ func TestKnowledgeSync(t *testing.T) {
 
 func testStore(t *testing.T) (*vectordb.Store, provider.Embedder) {
 	embedder := testProvider(t)
+	_ = embedder // used below, but test may skip before reaching
 	store, err := vectordb.Open(testConfig(t), embedder.EmbeddingDimension(), true)
 	require.NoError(t, err)
 	return store, embedder
