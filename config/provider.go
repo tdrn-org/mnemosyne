@@ -37,14 +37,14 @@ type ProviderConfig struct {
 }
 
 type DemoProviderConfig struct {
-	EmbeddingDimension int `toml:"embedding_dimension"`
+	EmbeddingDimension uint64 `toml:"embedding_dimension"`
 }
 
 type OllamaProviderConfig struct {
 	BaseURL            URLSpec `toml:"base_url"`
 	APIKey             string  `toml:"api_key"`
 	EmbeddingModel     string  `toml:"embedding_model"`
-	EmbeddingDimension int     `toml:"embedding_dimension"`
+	EmbeddingDimension uint64  `toml:"embedding_dimension"`
 }
 
 var knownProviderNames map[string]ProviderName = map[string]ProviderName{

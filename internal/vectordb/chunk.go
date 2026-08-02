@@ -19,6 +19,7 @@ package vectordb
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/qdrant/go-client/qdrant"
 	"github.com/tdrn-org/mnemosyne/internal/domain"
@@ -26,8 +27,9 @@ import (
 
 const knowledgeCollection string = "knowledge"
 
-func (s *Store) initKnowledgeCollection(ctx context.Context, dimension int, reset bool) error {
+func (s *Store) initKnowledgeCollection(ctx context.Context, dimension uint64, reset bool) error {
 	collectionName := s.collectionName(knowledgeCollection)
+	s.logger.Info("intializing collection...", slog.String("collection", collectionName))
 	exists, err := s.client.CollectionExists(ctx, collectionName)
 	if err != nil {
 		return fmt.Errorf("failed to check collection '%s' (cause: %w)", collectionName, err)
@@ -44,7 +46,7 @@ func (s *Store) initKnowledgeCollection(ctx context.Context, dimension int, rese
 	err = s.client.CreateCollection(ctx, &qdrant.CreateCollection{
 		CollectionName: collectionName,
 		VectorsConfig: qdrant.NewVectorsConfig(&qdrant.VectorParams{
-			Size:     uint64(dimension),
+			Size:     dimension,
 			Distance: qdrant.Distance_Cosine,
 		}),
 	})
@@ -55,13 +57,15 @@ func (s *Store) initKnowledgeCollection(ctx context.Context, dimension int, rese
 }
 
 func (s *Store) UpsertChunk(ctx context.Context, chunk *domain.Chunk, embedding ...float32) error {
+	collectionName := s.collectionName(knowledgeCollection)
+	s.logger.Info("upserting chunk...", slog.String("collection", collectionName))
 	point, err := EncodeToPoint(chunk)
 	if err != nil {
 		return err
 	}
 	point.Vectors = qdrant.NewVectors(embedding...)
 	_, err = s.client.Upsert(ctx, &qdrant.UpsertPoints{
-		CollectionName: s.collectionName(knowledgeCollection),
+		CollectionName: collectionName,
 		Points: []*qdrant.PointStruct{
 			point,
 		},
@@ -74,8 +78,10 @@ func (s *Store) UpsertChunk(ctx context.Context, chunk *domain.Chunk, embedding 
 }
 
 func (s *Store) SearchChunks(ctx context.Context, limit *uint64, vector ...float32) ([]domain.Chunk, error) {
+	collectionName := s.collectionName(knowledgeCollection)
+	s.logger.Info("searching collection...", slog.String("collection", collectionName))
 	res, err := s.client.Query(ctx, &qdrant.QueryPoints{
-		CollectionName: s.collectionName(knowledgeCollection),
+		CollectionName: collectionName,
 		Query:          qdrant.NewQuery(vector...),
 		Limit:          limit,
 		WithPayload:    qdrant.NewWithPayload(true),

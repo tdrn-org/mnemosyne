@@ -19,6 +19,6 @@ package provider
 import "context"
 
 type Embedder interface {
-	EmbeddingDimension() int
+	EmbeddingDimension() uint64
 	Embed(ctx context.Context, text string) ([]float32, error)
 }

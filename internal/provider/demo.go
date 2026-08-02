@@ -36,7 +36,7 @@ func NewDemoProvider(cfg *config.DemoProviderConfig) *DemoProvider {
 	}
 }
 
-func (p *DemoProvider) EmbeddingDimension() int {
+func (p *DemoProvider) EmbeddingDimension() uint64 {
 	return p.cfg.EmbeddingDimension
 }
 

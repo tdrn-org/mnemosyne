@@ -29,8 +29,11 @@ import (
 	"github.com/tdrn-org/go-httpserver"
 	"github.com/tdrn-org/mnemosyne/config"
 	"github.com/tdrn-org/mnemosyne/internal/adapters/middleware/mcp"
+	"github.com/tdrn-org/mnemosyne/internal/application/knowledge"
 	"github.com/tdrn-org/mnemosyne/internal/provider"
 	"github.com/tdrn-org/mnemosyne/internal/provider/ollama"
+	"github.com/tdrn-org/mnemosyne/internal/tokenizer"
+	"github.com/tdrn-org/mnemosyne/internal/vectordb"
 )
 
 const serverJobTickerSchedule time.Duration = 5 * time.Minute
@@ -39,7 +42,9 @@ type Server struct {
 	cfg                 *config.Config
 	httpServer          *httpserver.Instance
 	baseURL             *url.URL
+	vectorDBStore       *vectordb.Store
 	embedder            provider.Embedder
+	knowledge           *knowledge.Knowledge
 	jobTicker           *time.Ticker
 	jobTickerShutdown   chan any
 	jobTickerShutdownWG sync.WaitGroup
@@ -57,7 +62,9 @@ func StartServer(ctx context.Context, cfg *config.Config) (*Server, error) {
 	}
 	startFuncs := []func(context.Context, *config.Config) error{
 		s.startProvider,
+		s.startVectorDB,
 		s.startHttpServer,
+		s.startKnowledge,
 		s.startMCPHandler,
 		s.startJobTicker,
 	}
@@ -95,6 +102,7 @@ func (s *Server) Shutdown(ctx context.Context) error {
 func (s *Server) Close() error {
 	closeFuncs := []func() error{
 		s.closeHttpServer,
+		s.closeVectorDB,
 	}
 	closeErrs := make([]error, 0, len(closeFuncs))
 	for _, closeFunc := range closeFuncs {
@@ -118,11 +126,27 @@ func (s *Server) startProvider(ctx context.Context, cfg *config.Config) error {
 	case config.ProviderNameOllamaCloud:
 		s.embedder = ollama.NewCloudProvider(&cfg.Provider.OllamaCloud)
 	case config.ProviderNameOllama:
-		s.embedder = ollama.NewProvider(&cfg.Provider.OllamaCloud)
+		s.embedder = ollama.NewProvider(&cfg.Provider.Ollama)
 	default:
 		return fmt.Errorf("unrecognized provider name: '%s'", cfg.Provider.Name)
 	}
 	return nil
+}
+
+func (s *Server) startVectorDB(ctx context.Context, cfg *config.Config) error {
+	vectorDBStore, err := vectordb.Open(&cfg.VectorDB, s.embedder.EmbeddingDimension(), true)
+	if err != nil {
+		return err
+	}
+	s.vectorDBStore = vectorDBStore
+	return nil
+}
+
+func (s *Server) closeVectorDB() error {
+	if s.vectorDBStore == nil {
+		return nil
+	}
+	return s.vectorDBStore.Close()
 }
 
 func (s *Server) startHttpServer(ctx context.Context, cfg *config.Config) error {
@@ -159,6 +183,12 @@ func (s *Server) closeHttpServer() error {
 	return s.httpServer.Close()
 }
 
+func (s *Server) startKnowledge(_ context.Context, cfg *config.Config) error {
+	tokenizer := &tokenizer.EstimateTokenizer{RunesPerToken: 4}
+	s.knowledge = knowledge.NewKnowledge(&cfg.Knowledge, s.vectorDBStore, tokenizer, s.embedder)
+	return nil
+}
+
 func (s *Server) startMCPHandler(_ context.Context, _ *config.Config) error {
 	s.httpServer.Handle("/mcp", mcp.NewHandler(s.runtime()))
 	return nil
@@ -167,7 +197,9 @@ func (s *Server) startMCPHandler(_ context.Context, _ *config.Config) error {
 func (s *Server) startJobTicker(_ context.Context, cfg *config.Config) error {
 	schedule := serverJobTickerSchedule
 	s.logger.Info("starting job ticker...", slog.String("schedule", schedule.String()))
-	s.jobs = []jobFunc{}
+	s.jobs = []jobFunc{
+		s.knowledge.Sync,
+	}
 	s.jobTicker = time.NewTicker(schedule)
 	s.jobTickerShutdown = make(chan any)
 	s.jobTickerShutdownWG.Go(func() {

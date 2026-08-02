@@ -34,7 +34,7 @@ type Store struct {
 	logger *slog.Logger
 }
 
-func Open(cfg *config.VectorDBConfig, dimension int, reset bool) (*Store, error) {
+func Open(cfg *config.VectorDBConfig, dimension uint64, reset bool) (*Store, error) {
 	client, err := qdrant.NewClient(qdrantConfig(cfg))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Qdrant client (cause: %w)", err)
@@ -70,7 +70,7 @@ func qdrantConfig(cfg *config.VectorDBConfig) *qdrant.Config {
 	return config
 }
 
-func (s *Store) init(ctx context.Context, dimension int, reset bool) error {
+func (s *Store) init(ctx context.Context, dimension uint64, reset bool) error {
 	err := s.initDocumentsCollection(ctx, reset)
 	if err != nil {
 		return err

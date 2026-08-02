@@ -25,5 +25,5 @@ type KnowledgeStore interface {
 	ListStores(ctx context.Context) ([]string, error)
 	// SearchStore searches the given store for the given query and returns
 	// the matching [Chunk] instances.
-	SearchStore(ctx context.Context, store string, query string, limit *uint64) ([]Chunk, error)
+	SearchStore(ctx context.Context, query string, store *string, limit *uint64) ([]Chunk, error)
 }

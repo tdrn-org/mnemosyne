@@ -70,7 +70,7 @@ func NewProvider(cfg *config.OllamaProviderConfig) *Provider {
 	return p
 }
 
-func (p *Provider) EmbeddingDimension() int {
+func (p *Provider) EmbeddingDimension() uint64 {
 	return p.cfg.EmbeddingDimension
 }
 

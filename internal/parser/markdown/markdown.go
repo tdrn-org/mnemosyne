@@ -41,9 +41,14 @@ type Parser struct {
 func NewParser(store string, tokenizer Tokenizer) *Parser {
 	p := &Parser{
 		md:        goldmark.New(),
+		store:     store,
 		tokenizer: tokenizer,
 	}
 	return p
+}
+
+func (p *Parser) Store() string {
+	return p.store
 }
 
 func (p *Parser) Parse(path string, source []byte, tokenLimit int) ([]domain.Chunk, error) {
