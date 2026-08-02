@@ -152,6 +152,7 @@ func (s *markdownSync) syncChunks(ctx context.Context, chunks []domain.Chunk) {
 		embedding, err := s.embedder.Embed(ctx, chunk.Content)
 		if err != nil {
 			s.logger.Warn("failed to generate embedding for Markdown chunk", slog.Any("err", err))
+			continue
 		}
 		err = s.store.UpsertChunk(ctx, &chunk, embedding...)
 		if err != nil {
