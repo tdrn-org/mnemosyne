@@ -19,6 +19,11 @@ package domain
 import "context"
 
 type KnowledgeStore interface {
+	// ListStore lists the known knowledge stores.
+	// Each knowledge store contains a collection of [Chunk] instances feed from
+	// an external knowledge source (e.g. Obsidian).
 	ListStores(ctx context.Context) ([]string, error)
-	SearchStore(ctx context.Context, store string, query string) ([]Chunk, error)
+	// SearchStore searches the given store for the given query and returns
+	// the matching [Chunk] instances.
+	SearchStore(ctx context.Context, store string, query string, limit *uint64) ([]Chunk, error)
 }
