@@ -24,6 +24,10 @@ import (
 	"github.com/tdrn-org/mnemosyne/internal/domain"
 )
 
+func (s *Server) runtime() *serverRuntime {
+	return &serverRuntime{server: s}
+}
+
 type serverRuntime struct {
 	server *Server
 }

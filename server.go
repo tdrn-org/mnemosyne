@@ -48,6 +48,7 @@ type Server struct {
 	jobTicker           *time.Ticker
 	jobTickerShutdown   chan any
 	jobTickerShutdownWG sync.WaitGroup
+	jobTickerMutex      sync.Mutex
 	jobs                []jobFunc
 	logger              *slog.Logger
 }
@@ -233,7 +234,3 @@ func (s *Server) runJobs() {
 }
 
 type jobFunc func(ctx context.Context)
-
-func (s *Server) runtime() *serverRuntime {
-	return &serverRuntime{server: s}
-}

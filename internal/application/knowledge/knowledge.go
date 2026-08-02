@@ -27,6 +27,7 @@ import (
 	"slices"
 
 	"github.com/tdrn-org/mnemosyne/config"
+	"github.com/tdrn-org/mnemosyne/internal/crypto"
 	"github.com/tdrn-org/mnemosyne/internal/domain"
 	"github.com/tdrn-org/mnemosyne/internal/parser/markdown"
 	"github.com/tdrn-org/mnemosyne/internal/provider"
@@ -74,16 +75,13 @@ func (k *Knowledge) ListStores(ctx context.Context) ([]string, error) {
 }
 
 func (k *Knowledge) SearchStore(ctx context.Context, query string, store *string, limit *uint64) ([]domain.Chunk, error) {
-	if k.store == nil || k.embedder == nil {
-		return nil, fmt.Errorf("knowledge store not initialized")
-	}
 	embedding, err := k.embedder.Embed(ctx, query)
 	if err != nil {
-		return nil, fmt.Errorf("embedding query: %w", err)
+		return nil, fmt.Errorf("failed to generate embedding for query (cause: %w)", err)
 	}
 	chunks, err := k.store.SearchChunks(ctx, limit, embedding...)
 	if err != nil {
-		return nil, fmt.Errorf("searching chunks: %w", err)
+		return nil, fmt.Errorf("chunk search failure (cause: %w)", err)
 	}
 	if store != nil {
 		filtered := make([]domain.Chunk, 0, len(chunks))
@@ -123,6 +121,10 @@ func (s *markdownSync) Run(ctx context.Context) {
 }
 
 func (s *markdownSync) walkDir(ctx context.Context, path string, d fs.DirEntry, _ error) error {
+	//TODO: Use configuration to control excludes
+	if d.IsDir() && d.Name() == ".trash" {
+		return filepath.SkipDir
+	}
 	if !d.Type().IsRegular() {
 		return nil
 	}
@@ -138,12 +140,33 @@ func (s *markdownSync) walkDir(ctx context.Context, path string, d fs.DirEntry, 
 		fileLogger.Warn("failed to read Markdown file", slog.Any("err", err))
 		return nil
 	}
+	sourceHash := crypto.HashData(source)
+	document, err := s.store.LookupDocument(ctx, path)
+	if err != nil {
+		fileLogger.Error("failed to lookup document", slog.String("path", path), slog.Any("err", err))
+		return nil
+	}
+	if document != nil && document.Hash == sourceHash {
+		fileLogger.Debug("sync: skipping unchanged Markdown file")
+		return nil
+	}
 	chunks, err := s.Parser.Parse(path, source, TokenLimit)
 	if err != nil {
 		fileLogger.Error("failed to parse Markdown file", slog.Any("err", err))
 		return nil
 	}
 	s.syncChunks(ctx, chunks)
+	document = &domain.Document{
+		ID:   vectordb.DocumentID(path),
+		Path: path,
+		Hash: sourceHash,
+	}
+	//TODO: Update hash only if all chunks are processed successfully
+	err = s.store.UpsertDocument(ctx, document)
+	if err != nil {
+		fileLogger.Error("failed to upsert document", slog.String("path", path), slog.Any("err", err))
+		return nil
+	}
 	return nil
 }
 
