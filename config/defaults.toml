@@ -31,6 +31,9 @@ skip_compatibility_check = false
 [provider]
 name = "demo"
 
+[provider.demo]
+embedding_dimension = 768
+
 [provider.ollama_cloud]
 base_url = "https://ollama.com"
 api_key = ""
