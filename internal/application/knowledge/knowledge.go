@@ -25,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/tdrn-org/mnemosyne/config"
 	"github.com/tdrn-org/mnemosyne/internal/crypto"
@@ -172,7 +173,7 @@ func (s *markdownSync) walkDir(ctx context.Context, path string, d fs.DirEntry, 
 
 func (s *markdownSync) syncChunks(ctx context.Context, chunks []domain.Chunk) {
 	for _, chunk := range chunks {
-		embedding, err := s.embedder.Embed(ctx, chunk.Content)
+		embedding, err := s.embedder.Embed(ctx, fmt.Sprintf("Document: %s\nSection: %s\n\n%s", chunk.DocumentTitle, strings.Join(chunk.HeadingPath, " > "), chunk.Content))
 		if err != nil {
 			s.logger.Warn("failed to generate embedding for Markdown chunk", slog.Any("err", err))
 			continue
