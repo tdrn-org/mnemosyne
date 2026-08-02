@@ -36,7 +36,7 @@ import (
 	"github.com/tdrn-org/mnemosyne/internal/vectordb"
 )
 
-const serverJobTickerSchedule time.Duration = 5 * time.Minute
+const serverJobTickerSchedule time.Duration = 15 * time.Minute
 
 type Server struct {
 	cfg                 *config.Config
