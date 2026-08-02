@@ -20,6 +20,8 @@ import (
 	"context"
 	"log/slog"
 	"net/url"
+
+	"github.com/tdrn-org/mnemosyne/internal/domain"
 )
 
 type serverRuntime struct {
@@ -28,6 +30,10 @@ type serverRuntime struct {
 
 func (runtime *serverRuntime) BaseURL() *url.URL {
 	return runtime.server.baseURL
+}
+
+func (runtime *serverRuntime) Knowledge() domain.Knowledge {
+	return runtime.server.knowledge
 }
 
 func (runtime *serverRuntime) Logger() *slog.Logger {

@@ -24,11 +24,13 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/tdrn-org/mnemosyne/internal/buildinfo"
+	"github.com/tdrn-org/mnemosyne/internal/domain"
 )
 
 // Runtime provides the MCP handler access to the server's services and configuration.
 type Runtime interface {
 	BaseURL() *url.URL
+	Knowledge() domain.Knowledge
 	Logger() *slog.Logger
 }
 

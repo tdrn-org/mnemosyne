@@ -18,7 +18,7 @@ package domain
 
 import "context"
 
-type KnowledgeStore interface {
+type Knowledge interface {
 	// ListStore lists the known knowledge stores.
 	// Each knowledge store contains a collection of [Chunk] instances feed from
 	// an external knowledge source (e.g. Obsidian).
