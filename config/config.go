@@ -25,12 +25,15 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/gorhill/cronexpr"
 )
 
 type Config struct {
-	Logging  LoggingConfig  `toml:"logging"`
-	Server   ServerConfig   `toml:"server"`
-	VectorDB VectorDBConfig `toml:"vectordb"`
+	Logging   LoggingConfig   `toml:"logging"`
+	Server    ServerConfig    `toml:"server"`
+	VectorDB  VectorDBConfig  `toml:"vectordb"`
+	Provider  ProviderConfig  `toml:"provider"`
+	Knowledge KnowledgeConfig `toml:"knowledge"`
 }
 
 //go:embed defaults.toml
@@ -134,6 +137,37 @@ func (specs URLSpecs) URLs() []*url.URL {
 	return urls
 }
 
+type ScheduleSpec struct {
+	*cronexpr.Expression
+}
+
+func (spec *ScheduleSpec) Value() string {
+	if spec.Expression == nil {
+		return ""
+	}
+	return spec.Value()
+}
+
+func (spec *ScheduleSpec) MarshalTOML() ([]byte, error) {
+	return []byte(`"` + spec.Value() + `"`), nil
+}
+
+func (spec *ScheduleSpec) UnmarshalTOML(value any) error {
+	expressionString, ok := value.(string)
+	if !ok {
+		return fmt.Errorf("unexpected Cron expression type %v", value)
+	}
+	if expressionString == "" {
+		return nil
+	}
+	parsedExpression, err := cronexpr.Parse(expressionString)
+	if err != nil {
+		return fmt.Errorf("invalid Cron expression: '%s' (cause: %w)", expressionString, err)
+	}
+	spec.Expression = parsedExpression
+	return nil
+}
+
 type NetworkSpec struct {
 	netip.Prefix
 }
@@ -178,24 +212,4 @@ func (spec *TimeLocationSpec) Value() string {
 		return ""
 	}
 	return spec.String()
-}
-
-func (spec *TimeLocationSpec) MarshalTOML() ([]byte, error) {
-	return []byte(`"` + spec.Value() + `"`), nil
-}
-
-func (spec *TimeLocationSpec) UnmarshalTOML(value any) error {
-	locationString, ok := value.(string)
-	if !ok {
-		return fmt.Errorf("unexpected time location type %v", value)
-	}
-	if locationString == "" {
-		return nil
-	}
-	parsedLocation, err := time.LoadLocation(locationString)
-	if err != nil {
-		return fmt.Errorf("invalid time location: '%s' (cause: %w)", locationString, err)
-	}
-	spec.Location = parsedLocation
-	return nil
 }

@@ -27,3 +27,18 @@ tls = false
 api_key = ""
 tenant = "mnemosyne"
 skip_compatibility_check = false
+
+[provider]
+name = "demo"
+
+[provider.ollama_cloud]
+base_url = "https://ollama.com"
+api_key = ""
+embedding_model = "qwen3-embedding:0.6b"
+embedding_dimension = 1024
+
+[provider.ollama]
+base_url = "http://localhost:11434"
+api_key = ""
+embedding_model = "embeddinggemma"
+embedding_dimension = 768

@@ -21,13 +21,15 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/tdrn-org/mnemosyne/config"
+	"github.com/tdrn-org/mnemosyne/internal/provider"
 	"github.com/tdrn-org/mnemosyne/internal/vectordb"
 )
 
-func testStore(t *testing.T) *vectordb.Store {
-	store, err := vectordb.Open(testConfig(t), true)
+func testStore(t *testing.T) (*vectordb.Store, provider.Embedder) {
+	embedder := testProvider(t)
+	store, err := vectordb.Open(testConfig(t), embedder.EmbeddingDimension(), true)
 	require.NoError(t, err)
-	return store
+	return store, embedder
 }
 
 func testConfig(t *testing.T) *config.VectorDBConfig {
@@ -38,4 +40,8 @@ func testConfig(t *testing.T) *config.VectorDBConfig {
 		SkipCompatibilityCheck: true,
 		Tenant:                 "test",
 	}
+}
+
+func testProvider(_ *testing.T) provider.Embedder {
+	return provider.NewDemoProvider(&config.DemoProviderConfig{EmbeddingDimension: 256})
 }

@@ -25,7 +25,7 @@ import (
 )
 
 func TestDocuments(t *testing.T) {
-	store := testStore(t)
+	store, _ := testStore(t)
 	defer store.Close()
 
 	path := "document.md"

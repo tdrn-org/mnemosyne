@@ -14,25 +14,26 @@
  * limitations under the License.
  */
 
-package markdown_test
+package mnemosyne
 
 import (
-	"os"
-	"testing"
-
-	"github.com/stretchr/testify/require"
-	"github.com/tdrn-org/mnemosyne/internal/parser/markdown"
-	"github.com/tdrn-org/mnemosyne/internal/tokenizer"
+	"context"
+	"log/slog"
+	"net/url"
 )
 
-const markdownMDFile string = "testdata/markdown.md"
+type serverRuntime struct {
+	server *Server
+}
 
-func TestParser(t *testing.T) {
-	tokenizer := &tokenizer.EstimateTokenizer{RunesPerToken: 4}
-	parser := markdown.NewParser(t.Name(), tokenizer)
-	source, err := os.ReadFile(markdownMDFile)
-	require.NoError(t, err)
-	chunks, err := parser.Parse(markdownMDFile, source, 10)
-	require.NoError(t, err)
-	require.Len(t, chunks, 2)
+func (runtime *serverRuntime) BaseURL() *url.URL {
+	return runtime.server.baseURL
+}
+
+func (runtime *serverRuntime) Logger() *slog.Logger {
+	return runtime.server.logger
+}
+
+func (runtime *serverRuntime) Ping(ctx context.Context) error {
+	return nil
 }

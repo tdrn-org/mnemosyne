@@ -14,25 +14,17 @@
  * limitations under the License.
  */
 
-package markdown_test
+package ollama
 
-import (
-	"os"
-	"testing"
+import "net/http"
 
-	"github.com/stretchr/testify/require"
-	"github.com/tdrn-org/mnemosyne/internal/parser/markdown"
-	"github.com/tdrn-org/mnemosyne/internal/tokenizer"
-)
+type authorizationTransport struct {
+	apiKey string
+	base   http.RoundTripper
+}
 
-const markdownMDFile string = "testdata/markdown.md"
-
-func TestParser(t *testing.T) {
-	tokenizer := &tokenizer.EstimateTokenizer{RunesPerToken: 4}
-	parser := markdown.NewParser(t.Name(), tokenizer)
-	source, err := os.ReadFile(markdownMDFile)
-	require.NoError(t, err)
-	chunks, err := parser.Parse(markdownMDFile, source, 10)
-	require.NoError(t, err)
-	require.Len(t, chunks, 2)
+func (t *authorizationTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req = req.Clone(req.Context())
+	req.Header.Set("Authorization", "Bearer "+t.apiKey)
+	return t.base.RoundTrip(req)
 }

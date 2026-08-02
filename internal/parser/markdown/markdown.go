@@ -33,11 +33,12 @@ import (
 
 type Parser struct {
 	md        goldmark.Markdown
+	store     string
 	tokenizer Tokenizer
 	Debug     bool
 }
 
-func NewParser(tokenizer Tokenizer) *Parser {
+func NewParser(store string, tokenizer Tokenizer) *Parser {
 	p := &Parser{
 		md:        goldmark.New(),
 		tokenizer: tokenizer,
@@ -179,7 +180,7 @@ func (s *decodedSection) addChild(child *decodedSection, level int) {
 
 func (d *chunkDecoder) Chunk(tokenLimit int) []domain.Chunk {
 	aggregator := &chunkAggregator{
-		path:       d.path,
+		decoder:    d,
 		tokenLimit: tokenLimit,
 		chunks:     make([]domain.Chunk, 0),
 	}
@@ -188,7 +189,7 @@ func (d *chunkDecoder) Chunk(tokenLimit int) []domain.Chunk {
 }
 
 type chunkAggregator struct {
-	path       string
+	decoder    *chunkDecoder
 	tokenLimit int
 	chunks     []domain.Chunk
 }
@@ -215,7 +216,8 @@ func (a *chunkAggregator) addSectionFull(section *decodedSection) {
 	chunkHash := crypto.HashString(content)
 	a.chunks = append(a.chunks, domain.Chunk{
 		ID:            id,
-		Path:          a.path,
+		Store:         a.decoder.parser.store,
+		Path:          a.decoder.path,
 		ChunkIndex:    int64(len(a.chunks)),
 		ChunkHash:     chunkHash,
 		DocumentTitle: section.Title,
@@ -255,7 +257,8 @@ func (a *chunkAggregator) addSectionShallow(section *decodedSection) {
 	chunkHash := crypto.HashString(content)
 	a.chunks = append(a.chunks, domain.Chunk{
 		ID:            id,
-		Path:          a.path,
+		Store:         a.decoder.parser.store,
+		Path:          a.decoder.path,
 		ChunkIndex:    int64(len(a.chunks)),
 		ChunkHash:     chunkHash,
 		DocumentTitle: section.Title,
@@ -276,7 +279,7 @@ func (a *chunkAggregator) renderShallow(section *decodedSection) string {
 
 func (a *chunkAggregator) chunkID(section *decodedSection, subIndex int) string {
 	idPath := bytes.Buffer{}
-	idPath.WriteString(a.path)
+	idPath.WriteString(a.decoder.path)
 	for _, heading := range section.HeadingPath {
 		idPath.WriteString(heading)
 	}

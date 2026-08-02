@@ -26,7 +26,7 @@ import (
 
 const knowledgeCollection string = "knowledge"
 
-func (s *Store) initKnowledgeCollection(ctx context.Context, reset bool) error {
+func (s *Store) initKnowledgeCollection(ctx context.Context, dimension int, reset bool) error {
 	collectionName := s.collectionName(knowledgeCollection)
 	exists, err := s.client.CollectionExists(ctx, collectionName)
 	if err != nil {
@@ -44,7 +44,7 @@ func (s *Store) initKnowledgeCollection(ctx context.Context, reset bool) error {
 	err = s.client.CreateCollection(ctx, &qdrant.CreateCollection{
 		CollectionName: collectionName,
 		VectorsConfig: qdrant.NewVectorsConfig(&qdrant.VectorParams{
-			Size:     768,
+			Size:     uint64(dimension),
 			Distance: qdrant.Distance_Cosine,
 		}),
 	})

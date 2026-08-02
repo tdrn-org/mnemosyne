@@ -29,6 +29,8 @@ import (
 	"github.com/tdrn-org/go-httpserver"
 	"github.com/tdrn-org/mnemosyne/config"
 	"github.com/tdrn-org/mnemosyne/internal/adapters/middleware/mcp"
+	"github.com/tdrn-org/mnemosyne/internal/provider"
+	"github.com/tdrn-org/mnemosyne/internal/provider/ollama"
 )
 
 const serverJobTickerSchedule time.Duration = 5 * time.Minute
@@ -37,6 +39,7 @@ type Server struct {
 	cfg                 *config.Config
 	httpServer          *httpserver.Instance
 	baseURL             *url.URL
+	embedder            provider.Embedder
 	jobTicker           *time.Ticker
 	jobTickerShutdown   chan any
 	jobTickerShutdownWG sync.WaitGroup
@@ -53,6 +56,7 @@ func StartServer(ctx context.Context, cfg *config.Config) (*Server, error) {
 		logger: earlyLogger,
 	}
 	startFuncs := []func(context.Context, *config.Config) error{
+		s.startProvider,
 		s.startHttpServer,
 		s.startMCPHandler,
 		s.startJobTicker,
@@ -102,6 +106,21 @@ func (s *Server) Close() error {
 func (s *Server) Ping(ctx context.Context) error {
 	if s.httpServer == nil {
 		return fmt.Errorf("server not started")
+	}
+	return nil
+}
+
+func (s *Server) startProvider(ctx context.Context, cfg *config.Config) error {
+	s.logger.Info("starting Provider...", slog.String("name", string(cfg.Provider.Name)))
+	switch cfg.Provider.Name {
+	case config.ProviderNameDemo:
+		s.embedder = provider.NewDemoProvider(&cfg.Provider.Demo)
+	case config.ProviderNameOllamaCloud:
+		s.embedder = ollama.NewCloudProvider(&cfg.Provider.OllamaCloud)
+	case config.ProviderNameOllama:
+		s.embedder = ollama.NewProvider(&cfg.Provider.OllamaCloud)
+	default:
+		return fmt.Errorf("unrecognized provider name: '%s'", cfg.Provider.Name)
 	}
 	return nil
 }
@@ -185,20 +204,4 @@ type jobFunc func(ctx context.Context)
 
 func (s *Server) runtime() *serverRuntime {
 	return &serverRuntime{server: s}
-}
-
-type serverRuntime struct {
-	server *Server
-}
-
-func (runtime *serverRuntime) BaseURL() *url.URL {
-	return runtime.server.baseURL
-}
-
-func (runtime *serverRuntime) Logger() *slog.Logger {
-	return runtime.server.logger
-}
-
-func (runtime *serverRuntime) Ping(ctx context.Context) error {
-	return nil
 }

@@ -25,7 +25,7 @@ import (
 )
 
 func TestChunks(t *testing.T) {
-	store := testStore(t)
+	store, provider := testStore(t)
 	defer store.Close()
 
 	path := "document.md"
@@ -38,14 +38,12 @@ func TestChunks(t *testing.T) {
 		HeadingPath:   []string{"A documment about everything"},
 		Tags:          []string{},
 		Links:         []string{},
-		Content:       "LorLorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.",
+		Content:       "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.",
 	}
-	vector := make([]float32, 768)
-	for i := range vector {
-		vector[i] = float32(i%100) / 100.0
-	}
+	vector, err := provider.Embed(t.Context(), chunk.Content)
+	require.NoError(t, err)
 
-	err := store.UpsertChunk(t.Context(), chunk, vector...)
+	err = store.UpsertChunk(t.Context(), chunk, vector...)
 	require.NoError(t, err)
 
 	chunks, err := store.SearchChunks(t.Context(), nil, vector...)

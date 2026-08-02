@@ -14,25 +14,7 @@
  * limitations under the License.
  */
 
-package markdown_test
+package knowledge
 
-import (
-	"os"
-	"testing"
-
-	"github.com/stretchr/testify/require"
-	"github.com/tdrn-org/mnemosyne/internal/parser/markdown"
-	"github.com/tdrn-org/mnemosyne/internal/tokenizer"
-)
-
-const markdownMDFile string = "testdata/markdown.md"
-
-func TestParser(t *testing.T) {
-	tokenizer := &tokenizer.EstimateTokenizer{RunesPerToken: 4}
-	parser := markdown.NewParser(t.Name(), tokenizer)
-	source, err := os.ReadFile(markdownMDFile)
-	require.NoError(t, err)
-	chunks, err := parser.Parse(markdownMDFile, source, 10)
-	require.NoError(t, err)
-	require.Len(t, chunks, 2)
+type Store struct {
 }

@@ -22,6 +22,7 @@ import (
 
 type Chunk struct {
 	ID            string   `json:"id"`
+	Store         string   `json:"store"`
 	Path          string   `json:"path"`
 	ChunkIndex    int64    `json:"chunk_index"`
 	ChunkHash     string   `json:"chunk_hash"`
