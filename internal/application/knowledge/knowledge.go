@@ -106,6 +106,7 @@ func (s *markdownSync) walkDir(ctx context.Context, path string, d fs.DirEntry, 
 	extension := filepath.Ext(path)
 	if extension != ".md" {
 		fileLogger.Debug("sync: skipping Non-Markdown file")
+		return nil
 	}
 	fileLogger.Info("sync: processing Markdown file")
 	source, err := os.ReadFile(path)

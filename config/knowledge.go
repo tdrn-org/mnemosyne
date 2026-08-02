@@ -29,7 +29,7 @@ type MarkdownNature string
 
 const (
 	MarkdownNatureGeneric  MarkdownNature = "generic"
-	MarkdownNatureObsidian MarkdownNature = "opsidian"
+	MarkdownNatureObsidian MarkdownNature = "obsidian"
 )
 
 type MarkdownSourceConfig struct {
