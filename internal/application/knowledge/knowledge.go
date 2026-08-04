@@ -92,6 +92,10 @@ func (k *Knowledge) SearchStore(ctx context.Context, query string, store *string
 	return chunks, nil
 }
 
+func (k *Knowledge) ReadDocument(ctx context.Context, store, path string, limit *int) (string, error) {
+	return "", nil
+}
+
 func (k *Knowledge) Sync(ctx context.Context) {
 	k.logger.Info("syncing sources...")
 	for _, markdownSync := range k.markdownSyncs {

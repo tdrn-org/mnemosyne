@@ -26,4 +26,7 @@ type Knowledge interface {
 	// SearchStore searches the given store for the given query and returns
 	// the matching [Chunk] instances.
 	SearchStore(ctx context.Context, query string, store *string, limit *uint64) ([]Chunk, error)
+	// ReadDocument reads the given document from the given store applying the optional
+	// size limit.
+	ReadDocument(ctx context.Context, store, path string, limit *int) (string, error)
 }
