@@ -48,7 +48,7 @@ require (
 	github.com/qdrant/go-client v1.18.3
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.11.1
-	github.com/tdrn-org/go-conf v0.0.6
+	github.com/tdrn-org/go-conf v0.0.7
 	github.com/tdrn-org/go-diff v0.1.3
 	github.com/tdrn-org/go-httpserver v0.1.1
 	github.com/tdrn-org/go-tlsconf v0.0.10 // indirect
