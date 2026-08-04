@@ -34,8 +34,10 @@ func TestKnowledgeSync(t *testing.T) {
 	cfg := &config.KnowledgeConfig{
 		MarkdownSources: []config.MarkdownSourceConfig{
 			{
-				Store:  t.Name(),
-				Path:   "testdata/",
+				Store: t.Name(),
+				PathFilter: config.PathFilter{
+					Path: "testdata/",
+				},
 				Nature: config.MarkdownNatureObsidian,
 				Schedule: config.ScheduleSpec{
 					Expression: cronexpr.MustParse("0 * * * *"),

@@ -22,6 +22,7 @@ import (
 	"log/slog"
 	"net/netip"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -216,6 +217,7 @@ func (spec *TimeLocationSpec) Value() string {
 }
 
 type PathFilter struct {
+	Path    string   `toml:"path"`
 	Include []string `toml:"include"`
 	Exclude []string `toml:"exclude"`
 }
@@ -223,7 +225,8 @@ type PathFilter struct {
 func (f PathFilter) Match(name string) bool {
 	include := len(f.Include) == 0
 	for _, prefix := range f.Include {
-		match := strings.HasPrefix(name, prefix)
+		fullPrefix := filepath.Join(f.Path, prefix)
+		match := strings.HasPrefix(name, fullPrefix)
 		if !match {
 			continue
 		}
@@ -234,7 +237,8 @@ func (f PathFilter) Match(name string) bool {
 		return false
 	}
 	for _, prefix := range f.Exclude {
-		match := strings.HasPrefix(name, prefix)
+		fullPrefix := filepath.Join(f.Path, prefix)
+		match := strings.HasPrefix(name, fullPrefix)
 		if !match {
 			continue
 		}

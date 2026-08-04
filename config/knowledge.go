@@ -34,7 +34,6 @@ const (
 
 type MarkdownSourceConfig struct {
 	Store string `toml:"store"`
-	Path  string `toml:"path"`
 	PathFilter
 	Nature              MarkdownNature `toml:"nature"`
 	Schedule            ScheduleSpec   `toml:"schedule"`
