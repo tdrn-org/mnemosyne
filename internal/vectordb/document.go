@@ -19,6 +19,7 @@ package vectordb
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/qdrant/go-client/qdrant"
@@ -29,6 +30,7 @@ const documentsCollection string = "documents"
 
 func (s *Store) initDocumentsCollection(ctx context.Context, reset bool) error {
 	collectionName := s.collectionName(documentsCollection)
+	s.logger.Info("intializing collection...", slog.String("collection", collectionName))
 	exists, err := s.client.CollectionExists(ctx, collectionName)
 	if err != nil {
 		return fmt.Errorf("failed to check collection '%s' (cause: %w)", collectionName, err)

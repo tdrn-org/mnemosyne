@@ -46,7 +46,7 @@ func TestChunks(t *testing.T) {
 	err = store.UpsertChunk(t.Context(), chunk, vector...)
 	require.NoError(t, err)
 
-	chunks, err := store.SearchChunks(t.Context(), nil, vector...)
+	chunks, err := store.SearchChunks(t.Context(), nil, nil, vector...)
 	require.NoError(t, err)
 	require.Len(t, chunks, 1)
 }

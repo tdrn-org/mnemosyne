@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"text/template"
 
 	"github.com/tdrn-org/mnemosyne/config"
 	"github.com/tdrn-org/mnemosyne/internal/crypto"
@@ -35,7 +36,11 @@ import (
 	"github.com/tdrn-org/mnemosyne/internal/vectordb"
 )
 
-const TokenLimit int = 512
+const DefaultTokenLimit int = 512
+const DefaultRenderTemplate string = `Document: {{.DocumentTitle}}
+covers in section {{join .HeadingPath " > "}}
+
+{{.Content}}`
 
 type Knowledge struct {
 	store         *vectordb.Store
@@ -49,10 +54,10 @@ func NewKnowledge(cfg *config.KnowledgeConfig, store *vectordb.Store, tokenizer 
 	markdownSyncs := make([]markdownSync, 0, len(cfg.MarkdownSources))
 	for _, markdownSource := range cfg.MarkdownSources {
 		markdownSyncs = append(markdownSyncs, markdownSync{
+			cfg:      &markdownSource,
 			store:    store,
 			embedder: embedder,
 			Parser:   markdown.NewParser(markdownSource.Store, tokenizer),
-			Path:     markdownSource.Path,
 			logger:   logger.With(slog.String("source", fmt.Sprintf("markdown[%s]", markdownSource.Nature)), slog.String("path", markdownSource.Path)),
 		})
 	}
@@ -80,18 +85,9 @@ func (k *Knowledge) SearchStore(ctx context.Context, query string, store *string
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate embedding for query (cause: %w)", err)
 	}
-	chunks, err := k.store.SearchChunks(ctx, limit, embedding...)
+	chunks, err := k.store.SearchChunks(ctx, store, limit, embedding...)
 	if err != nil {
 		return nil, fmt.Errorf("chunk search failure (cause: %w)", err)
-	}
-	if store != nil {
-		filtered := make([]domain.Chunk, 0, len(chunks))
-		for _, chunk := range chunks {
-			if chunk.Store == *store {
-				filtered = append(filtered, chunk)
-			}
-		}
-		chunks = filtered
 	}
 	return chunks, nil
 }
@@ -104,16 +100,16 @@ func (k *Knowledge) Sync(ctx context.Context) {
 }
 
 type markdownSync struct {
+	cfg      *config.MarkdownSourceConfig
 	store    *vectordb.Store
 	embedder provider.Embedder
 	Parser   *markdown.Parser
-	Path     string
 	logger   *slog.Logger
 }
 
 func (s *markdownSync) Run(ctx context.Context) {
 	s.logger.Info("syncing source...")
-	err := filepath.WalkDir(s.Path, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(s.cfg.Path, func(path string, d fs.DirEntry, err error) error {
 		return s.walkDir(ctx, path, d, err)
 	})
 	if err != nil {
@@ -121,39 +117,35 @@ func (s *markdownSync) Run(ctx context.Context) {
 	}
 }
 
-func (s *markdownSync) walkDir(ctx context.Context, path string, d fs.DirEntry, _ error) error {
-	//TODO: Use configuration to control excludes
-	if d.IsDir() && d.Name() == ".trash" {
-		return filepath.SkipDir
+func (s *markdownSync) walkDir(ctx context.Context, path string, d fs.DirEntry, err0 error) error {
+	pathLogger := s.logger.With(slog.String("path", path))
+	consider, err := s.considerPath(pathLogger, path, d, err0)
+	if !consider {
+		return err
 	}
-	if !d.Type().IsRegular() {
-		return nil
-	}
-	fileLogger := s.logger.With(slog.String("file", path))
-	extension := filepath.Ext(path)
-	if extension != ".md" {
-		fileLogger.Debug("sync: skipping Non-Markdown file")
-		return nil
-	}
-	fileLogger.Info("sync: processing Markdown file")
+	pathLogger.Info("sync: processing Markdown file")
 	source, err := os.ReadFile(path)
 	if err != nil {
-		fileLogger.Warn("failed to read Markdown file", slog.Any("err", err))
+		pathLogger.Warn("failed to read Markdown file", slog.Any("err", err))
 		return nil
 	}
 	sourceHash := crypto.HashData(source)
 	document, err := s.store.LookupDocument(ctx, path)
 	if err != nil {
-		fileLogger.Error("failed to lookup document", slog.String("path", path), slog.Any("err", err))
+		pathLogger.Error("failed to lookup document", slog.String("path", path), slog.Any("err", err))
 		return nil
 	}
 	if document != nil && document.Hash == sourceHash {
-		fileLogger.Debug("sync: skipping unchanged Markdown file")
+		pathLogger.Debug("sync: skipping unchanged Markdown file")
 		return nil
 	}
-	chunks, err := s.Parser.Parse(path, source, TokenLimit)
+	tokenLimit := s.cfg.ChunkTokenLimit
+	if tokenLimit == 0 {
+		tokenLimit = DefaultTokenLimit
+	}
+	chunks, err := s.Parser.Parse(path, source, tokenLimit)
 	if err != nil {
-		fileLogger.Error("failed to parse Markdown file", slog.Any("err", err))
+		pathLogger.Error("failed to parse Markdown file", slog.Any("err", err))
 		return nil
 	}
 	s.syncChunks(ctx, chunks)
@@ -165,15 +157,44 @@ func (s *markdownSync) walkDir(ctx context.Context, path string, d fs.DirEntry, 
 	//TODO: Update hash only if all chunks are processed successfully
 	err = s.store.UpsertDocument(ctx, document)
 	if err != nil {
-		fileLogger.Error("failed to upsert document", slog.String("path", path), slog.Any("err", err))
+		pathLogger.Error("failed to upsert document", slog.String("path", path), slog.Any("err", err))
 		return nil
 	}
 	return nil
 }
 
+func (s *markdownSync) considerPath(pathLogger *slog.Logger, path string, d fs.DirEntry, err0 error) (bool, error) {
+	if err0 != nil {
+		return false, err0
+	}
+	if !s.cfg.PathFilter.Match(path) {
+		if d.IsDir() {
+			pathLogger.Debug("sync: ignoring directory")
+			return false, filepath.SkipDir
+		} else {
+			pathLogger.Debug("sync: ignoring file")
+			return false, nil
+		}
+	}
+	if !d.Type().IsRegular() {
+		return false, nil
+	}
+	extension := filepath.Ext(path)
+	if extension != ".md" {
+		pathLogger.Debug("sync: skipping Non-Markdown file")
+		return false, nil
+	}
+	return true, nil
+}
+
 func (s *markdownSync) syncChunks(ctx context.Context, chunks []domain.Chunk) {
 	for _, chunk := range chunks {
-		embedding, err := s.embedder.Embed(ctx, fmt.Sprintf("Document: %s\nSection: %s\n\n%s", chunk.DocumentTitle, strings.Join(chunk.HeadingPath, " > "), chunk.Content))
+		chunkText, err := s.renderChunk(&chunk)
+		if err != nil {
+			s.logger.Warn("failed to render Markdown chunk", slog.Any("err", err))
+			continue
+		}
+		embedding, err := s.embedder.Embed(ctx, chunkText)
 		if err != nil {
 			s.logger.Warn("failed to generate embedding for Markdown chunk", slog.Any("err", err))
 			continue
@@ -184,4 +205,24 @@ func (s *markdownSync) syncChunks(ctx context.Context, chunks []domain.Chunk) {
 			continue
 		}
 	}
+}
+
+func (s *markdownSync) renderChunk(chunk *domain.Chunk) (string, error) {
+	templText := s.cfg.ChunkRenderTemplate
+	if templText == "" {
+		templText = DefaultRenderTemplate
+	}
+	funcs := template.FuncMap{
+		"join": strings.Join,
+	}
+	templ, err := template.New("chunk_template").Funcs(funcs).Parse(templText)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse chunk render template (cause: %w)", err)
+	}
+	buffer := &strings.Builder{}
+	err = templ.Execute(buffer, chunk)
+	if err != nil {
+		return "", fmt.Errorf("failed to execute chunk render template (cause: %w)", err)
+	}
+	return buffer.String(), nil
 }

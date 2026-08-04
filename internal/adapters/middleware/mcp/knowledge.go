@@ -26,7 +26,7 @@ import (
 func registerKnowledgeTools(server *mcp.Server, runtime Runtime) {
 	// list_stores: list known knowledge stores
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "list_stores",
+		Name:        "list_knowledge_stores",
 		Description: "Lists all known knowledge stores. Each store contains document chunks ingested from an external knowledge source (e.g. Obsidian). Call this first to discover available stores before searching.",
 		InputSchema: map[string]any{
 			"type":       "object",
@@ -45,7 +45,7 @@ func registerKnowledgeTools(server *mcp.Server, runtime Runtime) {
 
 	// search_store: semantic search within a knowledge store
 	mcp.AddTool(server, &mcp.Tool{
-		Name:        "search_store",
+		Name:        "search_knowledge_store",
 		Description: "Searches a knowledge store for the given query and returns matching document chunks. The store parameter is optional — when omitted, all stores are searched. Use list_stores first to discover available store names.",
 		InputSchema: map[string]any{
 			"type": "object",

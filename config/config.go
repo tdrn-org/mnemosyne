@@ -22,6 +22,7 @@ import (
 	"log/slog"
 	"net/netip"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/BurntSushi/toml"
@@ -212,4 +213,32 @@ func (spec *TimeLocationSpec) Value() string {
 		return ""
 	}
 	return spec.String()
+}
+
+type PathFilter struct {
+	Include []string `toml:"include"`
+	Exclude []string `toml:"exclude"`
+}
+
+func (f PathFilter) Match(name string) bool {
+	include := len(f.Include) == 0
+	for _, prefix := range f.Include {
+		match := strings.HasPrefix(name, prefix)
+		if !match {
+			continue
+		}
+		include = true
+		break
+	}
+	if !include {
+		return false
+	}
+	for _, prefix := range f.Exclude {
+		match := strings.HasPrefix(name, prefix)
+		if !match {
+			continue
+		}
+		return false
+	}
+	return true
 }

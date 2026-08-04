@@ -53,6 +53,14 @@ func (s *Store) initKnowledgeCollection(ctx context.Context, dimension uint64, r
 	if err != nil {
 		return fmt.Errorf("failed to create collection '%s' (cause: %w)", collectionName, err)
 	}
+	_, err = s.client.CreateFieldIndex(ctx, &qdrant.CreateFieldIndexCollection{
+		CollectionName: collectionName,
+		FieldName:      "store",
+		FieldType:      qdrant.FieldType_FieldTypeKeyword.Enum(),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create 'store' index in collection '%s' (cause: %w)", collectionName, err)
+	}
 	return nil
 }
 
@@ -77,12 +85,21 @@ func (s *Store) UpsertChunk(ctx context.Context, chunk *domain.Chunk, embedding 
 
 }
 
-func (s *Store) SearchChunks(ctx context.Context, limit *uint64, vector ...float32) ([]domain.Chunk, error) {
+func (s *Store) SearchChunks(ctx context.Context, store *string, limit *uint64, vector ...float32) ([]domain.Chunk, error) {
 	collectionName := s.collectionName(knowledgeCollection)
 	s.logger.Info("searching collection...", slog.String("collection", collectionName))
+	var filter *qdrant.Filter
+	if store != nil {
+		filter = &qdrant.Filter{
+			Must: []*qdrant.Condition{
+				qdrant.NewMatch("store", *store),
+			},
+		}
+	}
 	res, err := s.client.Query(ctx, &qdrant.QueryPoints{
 		CollectionName: collectionName,
 		Query:          qdrant.NewQuery(vector...),
+		Filter:         filter,
 		Limit:          limit,
 		WithPayload:    qdrant.NewWithPayload(true),
 	})

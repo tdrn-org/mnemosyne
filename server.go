@@ -48,7 +48,6 @@ type Server struct {
 	jobTicker           *time.Ticker
 	jobTickerShutdown   chan any
 	jobTickerShutdownWG sync.WaitGroup
-	jobTickerMutex      sync.Mutex
 	jobs                []jobFunc
 	logger              *slog.Logger
 }

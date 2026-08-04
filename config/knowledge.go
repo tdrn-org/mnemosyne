@@ -33,10 +33,13 @@ const (
 )
 
 type MarkdownSourceConfig struct {
-	Store    string         `toml:"store"`
-	Path     string         `toml:"path"`
-	Nature   MarkdownNature `toml:"nature"`
-	Schedule ScheduleSpec   `toml:"schedule"`
+	Store string `toml:"store"`
+	Path  string `toml:"path"`
+	PathFilter
+	Nature              MarkdownNature `toml:"nature"`
+	Schedule            ScheduleSpec   `toml:"schedule"`
+	ChunkTokenLimit     int            `toml:"chunk_token_limit"`
+	ChunkRenderTemplate string         `toml:"chunk_render_template"`
 }
 
 var knownMarkdownNatures map[string]MarkdownNature = map[string]MarkdownNature{
