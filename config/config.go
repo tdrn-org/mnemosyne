@@ -36,6 +36,7 @@ type Config struct {
 	VectorDB  VectorDBConfig  `toml:"vectordb"`
 	Provider  ProviderConfig  `toml:"provider"`
 	Knowledge KnowledgeConfig `toml:"knowledge"`
+	Memory    MemoryConfig    `toml:"memory"`
 }
 
 //go:embed defaults.toml

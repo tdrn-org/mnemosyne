@@ -45,3 +45,24 @@ base_url = "http://localhost:11434"
 api_key = ""
 embedding_model = "embeddinggemma"
 embedding_dimension = 768
+
+[memory]
+[[memory.type]]
+name = "fact"
+ttl = "2160h"
+
+[[memory.type]]
+name = "decision"
+ttl = "4320h"
+
+[[memory.type]]
+name = "session_summary"
+ttl = "720h"
+
+[[memory.type]]
+name = "emotional"
+ttl = "0h"
+
+[[memory.type]]
+name = "context"
+ttl = "168h"
