@@ -128,6 +128,11 @@ func (s *markdownSync) walkDir(ctx context.Context, path string, d fs.DirEntry, 
 		return err
 	}
 	pathLogger.Info("sync: processing Markdown file")
+	relPath, err := filepath.Rel(s.cfg.Path, path)
+	if err != nil {
+		pathLogger.Warn("failed to resolve relative path of Markdown file", slog.Any("err", err))
+		return nil
+	}
 	source, err := os.ReadFile(path)
 	if err != nil {
 		pathLogger.Warn("failed to read Markdown file", slog.Any("err", err))
@@ -139,7 +144,7 @@ func (s *markdownSync) walkDir(ctx context.Context, path string, d fs.DirEntry, 
 		pathLogger.Error("failed to lookup document", slog.String("path", path), slog.Any("err", err))
 		return nil
 	}
-	if document != nil && document.Hash == sourceHash {
+	if document != nil && document.Path == relPath && document.Hash == sourceHash {
 		pathLogger.Debug("sync: skipping unchanged Markdown file")
 		return nil
 	}
@@ -147,15 +152,15 @@ func (s *markdownSync) walkDir(ctx context.Context, path string, d fs.DirEntry, 
 	if tokenLimit == 0 {
 		tokenLimit = DefaultTokenLimit
 	}
-	chunks, err := s.Parser.Parse(path, source, tokenLimit)
+	chunks, err := s.Parser.Parse(relPath, source, tokenLimit)
 	if err != nil {
 		pathLogger.Error("failed to parse Markdown file", slog.Any("err", err))
 		return nil
 	}
 	s.syncChunks(ctx, chunks)
 	document = &domain.Document{
-		ID:   vectordb.DocumentID(path),
-		Path: path,
+		ID:   vectordb.DocumentID(relPath),
+		Path: relPath,
 		Hash: sourceHash,
 	}
 	//TODO: Update hash only if all chunks are processed successfully
