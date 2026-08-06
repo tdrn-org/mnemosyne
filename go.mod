@@ -49,7 +49,7 @@ require (
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.11.1
 	github.com/tdrn-org/go-conf v0.0.7
-	github.com/tdrn-org/go-diff v0.1.3
+	github.com/tdrn-org/go-diff v0.1.4
 	github.com/tdrn-org/go-httpserver v0.1.2
 	github.com/tdrn-org/go-tlsconf v0.0.11 // indirect
 	golang.org/x/sys v0.47.0 // indirect
