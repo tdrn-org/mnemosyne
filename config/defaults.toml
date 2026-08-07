@@ -27,6 +27,7 @@ tls = false
 api_key = ""
 tenant = "mnemosyne"
 skip_compatibility_check = false
+reset = false
 
 [provider]
 name = "demo"

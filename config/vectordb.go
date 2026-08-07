@@ -22,4 +22,5 @@ type VectorDBConfig struct {
 	APIKey                 string `toml:"api_key"`
 	Tenant                 string `toml:"tenant"`
 	SkipCompatibilityCheck bool   `toml:"skip_compatibility_check"`
+	Reset                  bool   `toml:"reset"`
 }

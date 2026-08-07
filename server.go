@@ -137,7 +137,7 @@ func (s *Server) startProvider(ctx context.Context, cfg *config.Config) error {
 }
 
 func (s *Server) startVectorDB(ctx context.Context, cfg *config.Config) error {
-	vectorDB, err := vectordb.Open(&cfg.VectorDB, s.embedder.EmbeddingDimension(), true)
+	vectorDB, err := vectordb.Open(&cfg.VectorDB, s.embedder.EmbeddingDimension(), cfg.VectorDB.Reset)
 	if err != nil {
 		return err
 	}
