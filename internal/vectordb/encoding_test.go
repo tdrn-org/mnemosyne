@@ -30,7 +30,9 @@ func TestEncoding(t *testing.T) {
 		ID:          uuid.NewString(),
 		StringValue: t.Name(),
 		IntValue:    42,
+		DoubleValue: 0.42,
 		BoolValue:   true,
+		ListValue:   []string{"1st string", "2nd string"},
 	}
 	point, err := vectordb.EncodeToPoint(v)
 	require.NoError(t, err)
@@ -47,7 +49,9 @@ func TestDecoding(t *testing.T) {
 		Payload: qdrant.NewValueMap(map[string]any{
 			"string_value": t.Name(),
 			"int_value":    42,
+			"double_value": 0.42,
 			"bool_value":   true,
+			"list_value":   []any{"1st string", "2nd string"},
 		}),
 	}
 	err := vectordb.DecodeFromPoint(v, point)
@@ -59,8 +63,10 @@ func TestDecoding(t *testing.T) {
 }
 
 type EncodingTestStruct struct {
-	ID          string `json:"id"`
-	StringValue string `json:"string_value"`
-	IntValue    int64  `json:"int_value"`
-	BoolValue   bool   `json:"bool_value"`
+	ID          string   `json:"id"`
+	StringValue string   `json:"string_value"`
+	IntValue    int64    `json:"int_value"`
+	DoubleValue float64  `json:"double_value"`
+	BoolValue   bool     `json:"bool_value"`
+	ListValue   []string `json:"list_value"`
 }

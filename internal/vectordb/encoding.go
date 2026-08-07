@@ -163,7 +163,11 @@ func decodeBoolValue(field *reflect.Value, value *qdrant.Value) error {
 
 func decodeListValue(field *reflect.Value, value *qdrant.Value) error {
 	listValues := value.GetListValue().GetValues()
-	_ = listValues
+	fieldValues := make([]string, len(listValues))
+	for i, listValue := range listValues {
+		fieldValues[i] = listValue.GetStringValue()
+	}
+	field.Set(reflect.ValueOf(fieldValues))
 	return nil
 }
 
