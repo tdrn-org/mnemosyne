@@ -59,7 +59,7 @@ func NewKnowledge(cfg *config.KnowledgeConfig, vectorDB *vectordb.Store, tokeniz
 			Parser:   markdown.NewParser(markdownSource.Store, tokenizer),
 			vectorDB: vectorDB,
 			embedder: embedder,
-			logger:   logger.With(slog.String("source", fmt.Sprintf("markdown[%s]", markdownSource.Nature)), slog.String("path", markdownSource.Path)),
+			logger:   logger.With(slog.String("source", fmt.Sprintf("markdown[%s]:%s", markdownSource.Nature, markdownSource.Path))),
 		})
 	}
 	return &Knowledge{
