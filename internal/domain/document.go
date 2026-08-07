@@ -29,4 +29,5 @@ type Document struct {
 type DocumentStore interface {
 	UpsertDocument(ctx context.Context, document *Document) error
 	LookupDocument(ctx context.Context, path string) (*Document, error)
+	ReadDocument(ctx context.Context, store, path string, limit *int) (string, error)
 }
