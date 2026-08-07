@@ -75,4 +75,37 @@ func registerKnowledgeTools(server *mcp.Server, runtime Runtime) {
 		}
 		return result, chunksMeta, nil
 	})
+
+	// read_knowledge_store_document: read a full document from a knowledge store
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "read_knowledge_store_document",
+		Description: "Reads the full content of a single document from a knowledge store. The document is returned as raw text, optionally truncated to the given rune limit. Use this after search_knowledge_store to retrieve the complete source of a matching chunk.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"store": map[string]any{"type": "string", "description": "The store name containing the document."},
+				"path":  map[string]any{"type": "string", "description": "The relative path of the document within the store (e.g. '10_Holger/Ueber Holger.md')."},
+				"limit": map[string]any{"type": "number", "description": "Optional rune limit for the returned content. When exceeded, the document is truncated with '...' appended."},
+			},
+			"required": []string{"store", "path"},
+		},
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, input struct {
+		Store string `json:"store"`
+		Path  string `json:"path"`
+		Limit *int   `json:"limit"`
+	}) (*mcp.CallToolResult, any, error) {
+		document, err := runtime.Knowledge().ReadDocument(ctx, input.Store, input.Path, input.Limit)
+		if err != nil {
+			return nil, nil, fmt.Errorf("reading document: %w", err)
+		}
+		if document == "" {
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("Document '%s' not found in store '%s'", input.Path, input.Store)}},
+			}, nil, nil
+		}
+		text := fmt.Sprintf("Read document '%s' from store '%s' (%d runes)", input.Path, input.Store, len([]rune(document)))
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{&mcp.TextContent{Text: text}},
+		}, map[string]any{"document": document}, nil
+	})
 }

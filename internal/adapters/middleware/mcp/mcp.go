@@ -31,6 +31,7 @@ import (
 type Runtime interface {
 	BaseURL() *url.URL
 	Knowledge() domain.Knowledge
+	Memory() domain.MemoryStore
 	Logger() *slog.Logger
 }
 
@@ -57,6 +58,7 @@ func NewHandler(runtime Runtime) http.Handler {
 	})
 
 	registerKnowledgeTools(server, runtime)
+	registerMemoryTools(server, runtime)
 
 	getServer := func(_ *http.Request) *mcp.Server {
 		return server
