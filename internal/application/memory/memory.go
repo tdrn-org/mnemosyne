@@ -66,7 +66,11 @@ func (m *Memory) RememberMemory(ctx context.Context, memory *domain.Memory) erro
 	if memory.ID == "" {
 		memory.ID = domain.MemoryID()
 	}
-	return m.vectorDB.UpsertMemory(ctx, memory)
+	embedding, err := m.embedder.Embed(ctx, memory.Content)
+	if err != nil {
+		return fmt.Errorf("failed to generate embedding for memory (cause: %w)", err)
+	}
+	return m.vectorDB.UpsertMemory(ctx, memory, embedding...)
 }
 
 func (m *Memory) ForgetMemory(ctx context.Context, id string) error {
