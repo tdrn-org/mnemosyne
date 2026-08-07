@@ -148,7 +148,7 @@ func (s *markdownSync) FindDocument(ctx context.Context, documentPath string) ([
 	var foundSource []byte
 	err := filepath.WalkDir(s.Cfg.Path, func(path string, d fs.DirEntry, err error) error {
 		return s.walkSources(ctx, func(_ context.Context, path, relPath string, source []byte) error {
-			if relPath == documentPath {
+			if relPath != documentPath {
 				return nil
 			}
 			foundSource = source
@@ -194,7 +194,7 @@ func (s *markdownSync) walkSources(ctx context.Context, fn func(context.Context,
 func (s *markdownSync) syncSource(ctx context.Context, path, relPath string, source []byte) error {
 	pathLogger := s.logger.With(slog.String("path", path))
 	sourceHash := crypto.HashData(source)
-	document, err := s.vectorDB.LookupDocument(ctx, path)
+	document, err := s.vectorDB.LookupDocument(ctx, relPath)
 	if err != nil {
 		pathLogger.Error("failed to lookup document", slog.Any("err", err))
 		return nil
