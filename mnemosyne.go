@@ -68,6 +68,7 @@ type cmdLine struct {
 
 type runCmd struct {
 	Config    string `short:"c" help:"The configuration file to use" default:"${config_default}"`
+	Reset     bool   `help:"Resets the vector database to an empty state"`
 	stoppedWG sync.WaitGroup
 }
 
@@ -82,6 +83,9 @@ func (cmd *runCmd) Run(ctx context.Context, args *cmdLine) error {
 	}
 	cmd.applyGlobalArgs(config, args)
 	applyLoggingConfig(&config.Logging)
+	if cmd.Reset {
+		config.VectorDB.Reset = true
+	}
 	server, err := StartServer(ctx, config)
 	if err != nil {
 		return err
