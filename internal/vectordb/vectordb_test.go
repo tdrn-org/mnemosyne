@@ -17,6 +17,7 @@
 package vectordb_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -25,7 +26,7 @@ import (
 	"github.com/tdrn-org/mnemosyne/internal/vectordb"
 )
 
-func testStore(t *testing.T) (*vectordb.Store, provider.Embedder) {
+func testVectorDB(t *testing.T) (*vectordb.Store, provider.Embedder) {
 	embedder := testProvider(t)
 	_ = embedder // used below, but test may skip before reaching
 	store, err := vectordb.Open(testConfig(t), embedder.EmbeddingDimension(), true)
@@ -35,9 +36,10 @@ func testStore(t *testing.T) (*vectordb.Store, provider.Embedder) {
 
 func testConfig(t *testing.T) *config.VectorDBConfig {
 	t.SkipNow()
+	address := "localhost:6334"
 	return &config.VectorDBConfig{
-		Address:                "localhost:6334",
-		TLS:                    true,
+		Address:                address,
+		TLS:                    !strings.HasPrefix(address, "localhost"),
 		SkipCompatibilityCheck: true,
 		Tenant:                 "test",
 	}

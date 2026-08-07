@@ -27,6 +27,7 @@ import (
 	"slices"
 	"strings"
 	"text/template"
+	"unicode/utf8"
 
 	"github.com/tdrn-org/mnemosyne/config"
 	"github.com/tdrn-org/mnemosyne/internal/crypto"
@@ -43,26 +44,26 @@ covers in section {{join .HeadingPath " > "}}
 {{.Content}}`
 
 type Knowledge struct {
-	store         *vectordb.Store
+	vectorDB      *vectordb.Store
 	embedder      provider.Embedder
 	markdownSyncs []markdownSync
 	logger        *slog.Logger
 }
 
-func NewKnowledge(cfg *config.KnowledgeConfig, store *vectordb.Store, tokenizer markdown.Tokenizer, embedder provider.Embedder) *Knowledge {
+func NewKnowledge(cfg *config.KnowledgeConfig, vectorDB *vectordb.Store, tokenizer markdown.Tokenizer, embedder provider.Embedder) *Knowledge {
 	logger := slog.With("collection", "knowledge")
 	markdownSyncs := make([]markdownSync, 0, len(cfg.MarkdownSources))
 	for _, markdownSource := range cfg.MarkdownSources {
 		markdownSyncs = append(markdownSyncs, markdownSync{
-			cfg:      &markdownSource,
-			store:    store,
-			embedder: embedder,
+			Cfg:      &markdownSource,
 			Parser:   markdown.NewParser(markdownSource.Store, tokenizer),
+			vectorDB: vectorDB,
+			embedder: embedder,
 			logger:   logger.With(slog.String("source", fmt.Sprintf("markdown[%s]", markdownSource.Nature)), slog.String("path", markdownSource.Path)),
 		})
 	}
 	return &Knowledge{
-		store:         store,
+		vectorDB:      vectorDB,
 		embedder:      embedder,
 		markdownSyncs: markdownSyncs,
 		logger:        logger,
@@ -85,7 +86,7 @@ func (k *Knowledge) SearchStore(ctx context.Context, query string, store *string
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate embedding for query (cause: %w)", err)
 	}
-	chunks, err := k.store.SearchChunks(ctx, store, limit, embedding...)
+	chunks, err := k.vectorDB.SearchChunks(ctx, store, limit, embedding...)
 	if err != nil {
 		return nil, fmt.Errorf("chunk search failure (cause: %w)", err)
 	}
@@ -93,42 +94,91 @@ func (k *Knowledge) SearchStore(ctx context.Context, query string, store *string
 }
 
 func (k *Knowledge) ReadDocument(ctx context.Context, store, path string, limit *int) (string, error) {
-	return "", nil
+	for _, markdownSync := range k.markdownSyncs {
+		if markdownSync.Parser.Store() == store {
+			source, err := markdownSync.FindDocument(ctx, path)
+			if err != nil {
+				return "", err
+			}
+			if source == nil {
+				return "", nil
+			}
+			document := k.limitDocument(string(source), limit)
+			return document, nil
+		}
+	}
+	return "", fmt.Errorf("unknown store '%s'", store)
+}
+
+func (k *Knowledge) limitDocument(document string, limit *int) string {
+	if limit == nil {
+		return document
+	}
+	maxRunes := *limit
+	if maxRunes <= 0 || len(document) < maxRunes || utf8.RuneCountInString(document) < maxRunes {
+		return document
+	}
+	runeCount := 0
+	for byteIndex := range document {
+		if runeCount == maxRunes {
+			return document[:byteIndex] + "..."
+		}
+		runeCount++
+	}
+	return document
 }
 
 func (k *Knowledge) Sync(ctx context.Context) {
 	k.logger.Info("syncing sources...")
 	for _, markdownSync := range k.markdownSyncs {
-		markdownSync.Run(ctx)
+		markdownSync.RunSync(ctx)
 	}
 }
 
 type markdownSync struct {
-	cfg      *config.MarkdownSourceConfig
-	store    *vectordb.Store
-	embedder provider.Embedder
+	Cfg      *config.MarkdownSourceConfig
 	Parser   *markdown.Parser
+	vectorDB *vectordb.Store
+	embedder provider.Embedder
 	logger   *slog.Logger
 }
 
-func (s *markdownSync) Run(ctx context.Context) {
+func (s *markdownSync) FindDocument(ctx context.Context, documentPath string) ([]byte, error) {
+	s.logger.Info("searching document...", slog.String("document", documentPath))
+	var foundSource []byte
+	err := filepath.WalkDir(s.Cfg.Path, func(path string, d fs.DirEntry, err error) error {
+		return s.walkSources(ctx, func(_ context.Context, path, relPath string, source []byte) error {
+			if relPath == documentPath {
+				return nil
+			}
+			foundSource = source
+			return filepath.SkipAll
+		}, path, d, err)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to search document '%s' (cause: %w)", documentPath, err)
+	}
+	return foundSource, nil
+}
+
+func (s *markdownSync) RunSync(ctx context.Context) {
 	s.logger.Info("syncing source...")
-	err := filepath.WalkDir(s.cfg.Path, func(path string, d fs.DirEntry, err error) error {
-		return s.walkDir(ctx, path, d, err)
+	err := filepath.WalkDir(s.Cfg.Path, func(path string, d fs.DirEntry, err error) error {
+		return s.walkSources(ctx, s.syncSource, path, d, err)
 	})
 	if err != nil {
 		s.logger.Error("failed to sync source", slog.Any("err", err))
 	}
 }
 
-func (s *markdownSync) walkDir(ctx context.Context, path string, d fs.DirEntry, err0 error) error {
-	pathLogger := s.logger.With(slog.String("path", path))
-	consider, err := s.considerPath(pathLogger, path, d, err0)
+func (s *markdownSync) walkSources(ctx context.Context, fn func(context.Context, string, string, []byte) error, path string, d fs.DirEntry, err0 error) error {
+	consider, err := s.considerPath(path, d, err0)
 	if !consider {
 		return err
 	}
-	pathLogger.Info("sync: processing Markdown file")
-	relPath, err := filepath.Rel(s.cfg.Path, path)
+	pathLogger := s.logger.With(slog.String("path", path))
+	pathLogger.Debug("processing Markdown file")
+	relPath, err := filepath.Rel(s.Cfg.Path, path)
 	if err != nil {
 		pathLogger.Warn("failed to resolve relative path of Markdown file", slog.Any("err", err))
 		return nil
@@ -138,17 +188,22 @@ func (s *markdownSync) walkDir(ctx context.Context, path string, d fs.DirEntry, 
 		pathLogger.Warn("failed to read Markdown file", slog.Any("err", err))
 		return nil
 	}
+	return fn(ctx, path, relPath, source)
+}
+
+func (s *markdownSync) syncSource(ctx context.Context, path, relPath string, source []byte) error {
+	pathLogger := s.logger.With(slog.String("path", path))
 	sourceHash := crypto.HashData(source)
-	document, err := s.store.LookupDocument(ctx, path)
+	document, err := s.vectorDB.LookupDocument(ctx, path)
 	if err != nil {
-		pathLogger.Error("failed to lookup document", slog.String("path", path), slog.Any("err", err))
+		pathLogger.Error("failed to lookup document", slog.Any("err", err))
 		return nil
 	}
 	if document != nil && document.Path == relPath && document.Hash == sourceHash {
-		pathLogger.Debug("sync: skipping unchanged Markdown file")
+		pathLogger.Debug("skipping unchanged Markdown file")
 		return nil
 	}
-	tokenLimit := s.cfg.ChunkTokenLimit
+	tokenLimit := s.Cfg.ChunkTokenLimit
 	if tokenLimit == 0 {
 		tokenLimit = DefaultTokenLimit
 	}
@@ -164,7 +219,7 @@ func (s *markdownSync) walkDir(ctx context.Context, path string, d fs.DirEntry, 
 		Hash: sourceHash,
 	}
 	//TODO: Update hash only if all chunks are processed successfully
-	err = s.store.UpsertDocument(ctx, document)
+	err = s.vectorDB.UpsertDocument(ctx, document)
 	if err != nil {
 		pathLogger.Error("failed to upsert document", slog.String("path", path), slog.Any("err", err))
 		return nil
@@ -172,16 +227,17 @@ func (s *markdownSync) walkDir(ctx context.Context, path string, d fs.DirEntry, 
 	return nil
 }
 
-func (s *markdownSync) considerPath(pathLogger *slog.Logger, path string, d fs.DirEntry, err0 error) (bool, error) {
+func (s *markdownSync) considerPath(path string, d fs.DirEntry, err0 error) (bool, error) {
+	pathLogger := s.logger.With(slog.String("path", path))
 	if err0 != nil {
 		return false, err0
 	}
-	if !s.cfg.PathFilter.Match(path) {
+	if !s.Cfg.PathFilter.Match(path) {
 		if d.IsDir() {
-			pathLogger.Debug("sync: ignoring directory")
+			pathLogger.Debug("ignoring directory")
 			return false, filepath.SkipDir
 		} else {
-			pathLogger.Debug("sync: ignoring file")
+			pathLogger.Debug("ignoring file")
 			return false, nil
 		}
 	}
@@ -190,7 +246,7 @@ func (s *markdownSync) considerPath(pathLogger *slog.Logger, path string, d fs.D
 	}
 	extension := filepath.Ext(path)
 	if extension != ".md" {
-		pathLogger.Debug("sync: skipping Non-Markdown file")
+		pathLogger.Debug("skipping Non-Markdown file")
 		return false, nil
 	}
 	return true, nil
@@ -208,7 +264,7 @@ func (s *markdownSync) syncChunks(ctx context.Context, chunks []domain.Chunk) {
 			s.logger.Warn("failed to generate embedding for Markdown chunk", slog.Any("err", err))
 			continue
 		}
-		err = s.store.UpsertChunk(ctx, &chunk, embedding...)
+		err = s.vectorDB.UpsertChunk(ctx, &chunk, embedding...)
 		if err != nil {
 			s.logger.Warn("failed to upsert Markdown chunk", slog.Any("err", err))
 			continue
@@ -217,7 +273,7 @@ func (s *markdownSync) syncChunks(ctx context.Context, chunks []domain.Chunk) {
 }
 
 func (s *markdownSync) renderChunk(chunk *domain.Chunk) (string, error) {
-	templText := s.cfg.ChunkRenderTemplate
+	templText := s.Cfg.ChunkRenderTemplate
 	if templText == "" {
 		templText = DefaultRenderTemplate
 	}

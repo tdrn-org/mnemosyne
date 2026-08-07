@@ -25,10 +25,10 @@ import (
 	"github.com/tdrn-org/mnemosyne/internal/domain"
 )
 
-const knowledgeCollection string = "knowledge"
+const memoryCollection string = "memory"
 
-func (s *Store) initKnowledgeCollection(ctx context.Context, dimension uint64, reset bool) error {
-	collectionName := s.collectionName(knowledgeCollection)
+func (s *Store) initMemoryCollection(ctx context.Context, dimension uint64, reset bool) error {
+	collectionName := s.collectionName(memoryCollection)
 	s.logger.Info("intializing collection...", slog.String("collection", collectionName))
 	exists, err := s.client.CollectionExists(ctx, collectionName)
 	if err != nil {
@@ -56,19 +56,28 @@ func (s *Store) initKnowledgeCollection(ctx context.Context, dimension uint64, r
 	_, err = s.client.CreateFieldIndex(ctx, &qdrant.CreateFieldIndexCollection{
 		CollectionName: collectionName,
 		Wait:           &waitCreateIndex,
-		FieldName:      "store",
+		FieldName:      "type",
 		FieldType:      qdrant.FieldType_FieldTypeKeyword.Enum(),
 	})
 	if err != nil {
-		return fmt.Errorf("failed to create 'store' index in collection '%s' (cause: %w)", collectionName, err)
+		return fmt.Errorf("failed to create 'type' index in collection '%s' (cause: %w)", collectionName, err)
+	}
+	_, err = s.client.CreateFieldIndex(ctx, &qdrant.CreateFieldIndexCollection{
+		CollectionName: collectionName,
+		Wait:           &waitCreateIndex,
+		FieldName:      "trust",
+		FieldType:      qdrant.FieldType_FieldTypeFloat.Enum(),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create 'trust' index in collection '%s' (cause: %w)", collectionName, err)
 	}
 	return nil
 }
 
-func (s *Store) UpsertChunk(ctx context.Context, chunk *domain.Chunk, embedding ...float32) error {
-	collectionName := s.collectionName(knowledgeCollection)
+func (s *Store) UpsertMemory(ctx context.Context, memory *domain.Memory, embedding ...float32) error {
+	collectionName := s.collectionName(memoryCollection)
 	s.logger.Info("upserting chunk...", slog.String("collection", collectionName))
-	point, err := EncodeToPoint(chunk)
+	point, err := EncodeToPoint(memory)
 	if err != nil {
 		return err
 	}
@@ -80,17 +89,49 @@ func (s *Store) UpsertChunk(ctx context.Context, chunk *domain.Chunk, embedding 
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("failed to upsert chunk '%s' (cause: %w)", chunk.DocumentTitle, err)
+		return fmt.Errorf("failed to upsert memory '%s' (cause: %w)", memory.ID, err)
 	}
 	return nil
 }
 
-func (s *Store) SearchChunks(ctx context.Context, store *string, limit *uint64, vector ...float32) ([]domain.Chunk, error) {
-	collectionName := s.collectionName(knowledgeCollection)
+func (s *Store) LookupMemory(ctx context.Context, id string) (*domain.Memory, error) {
+	res, err := s.client.Get(ctx, &qdrant.GetPoints{
+		CollectionName: s.collectionName(memoryCollection),
+		Ids:            []*qdrant.PointId{qdrant.NewID(id)},
+		WithPayload:    qdrant.NewWithPayload(true),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to lookup memory '%s' (cause: %w)", id, err)
+	}
+	if len(res) == 0 {
+		return nil, nil
+	}
+	memory := &domain.Memory{}
+	err = DecodeFromPoint(memory, res[0])
+	if err != nil {
+		return nil, err
+	}
+	return memory, nil
+}
+
+func (s *Store) SearchMemories(ctx context.Context, typeFilter *string, minTrust *float64, limit *uint64, vector ...float32) ([]domain.Memory, error) {
+	collectionName := s.collectionName(memoryCollection)
 	s.logger.Info("searching collection...", slog.String("collection", collectionName))
 	filter := &qdrant.Filter{}
-	if store != nil {
-		filter.Must = append(filter.Must, qdrant.NewMatch("store", *store))
+	if typeFilter != nil {
+		filter.Must = append(filter.Must, qdrant.NewMatch("type", *typeFilter))
+	}
+	if minTrust != nil {
+		filter.Must = append(filter.Must, &qdrant.Condition{
+			ConditionOneOf: &qdrant.Condition_Field{
+				Field: &qdrant.FieldCondition{
+					Key: "trust",
+					Range: &qdrant.Range{
+						Gte: minTrust,
+					},
+				},
+			},
+		})
 	}
 	res, err := s.client.Query(ctx, &qdrant.QueryPoints{
 		CollectionName: collectionName,
@@ -100,16 +141,16 @@ func (s *Store) SearchChunks(ctx context.Context, store *string, limit *uint64, 
 		WithPayload:    qdrant.NewWithPayload(true),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to query chunks (cause: %w)", err)
+		return nil, fmt.Errorf("failed to query memories (cause: %w)", err)
 	}
-	chunks := make([]domain.Chunk, 0, len(res))
+	memories := make([]domain.Memory, 0, len(res))
 	for _, found := range res {
-		chunk := &domain.Chunk{}
-		err = DecodeFromPoint(chunk, found)
+		memory := &domain.Memory{}
+		err = DecodeFromPoint(memory, found)
 		if err != nil {
-			return nil, fmt.Errorf("failed to decode chunk query result (cause: %w)", err)
+			return nil, fmt.Errorf("failed to decode memory query result (cause: %w)", err)
 		}
-		chunks = append(chunks, *chunk)
+		memories = append(memories, *memory)
 	}
-	return chunks, nil
+	return memories, nil
 }

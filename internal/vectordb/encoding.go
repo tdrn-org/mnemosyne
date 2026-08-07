@@ -18,7 +18,9 @@ package vectordb
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/qdrant/go-client/qdrant"
 )
@@ -52,7 +54,7 @@ func EncodeToPoint(v any) (*qdrant.PointStruct, error) {
 			case reflect.Slice, reflect.Array:
 				payload[tag] = encodeSliceOrArray(field)
 			default:
-				payload[tag] = field.Interface()
+				payload[tag] = encodeInterface(field)
 			}
 		}
 	}
@@ -69,6 +71,15 @@ func encodeSliceOrArray(field reflect.Value) []any {
 	return value
 }
 
+func encodeInterface(field reflect.Value) any {
+	switch v := field.Interface().(type) {
+	case time.Time:
+		return v.Format(time.RFC3339)
+	default:
+		return v
+	}
+}
+
 func DecodeFromPoint(v any, point Point) error {
 	vValue, err := safeValueOf(v)
 	if err != nil {
@@ -78,26 +89,81 @@ func DecodeFromPoint(v any, point Point) error {
 	structType := structValue.Type()
 	numField := structValue.NumField()
 	for i := range numField {
-		field := structType.Field(i)
-		tag := field.Tag.Get("json")
+		typeField := structType.Field(i)
+		tag := typeField.Tag.Get("json")
 		if tag == "" || tag == "-" {
 			continue
 		}
+		field := structValue.Field(i)
 		pointID := point.GetId()
 		pointPayload := point.GetPayload()
 		if tag == "id" {
-			structValue.Field(i).Set(reflect.ValueOf(pointID.GetUuid()))
+			err = decodeUUIDValue(&field, pointID)
 		} else if payloadValue, ok := pointPayload[tag]; ok {
-			switch payloadValue.Kind.(type) {
-			case *qdrant.Value_StringValue:
-				structValue.Field(i).Set(reflect.ValueOf(pointPayload[tag].GetStringValue()))
-			case *qdrant.Value_IntegerValue:
-				structValue.Field(i).Set(reflect.ValueOf(pointPayload[tag].GetIntegerValue()))
-			case *qdrant.Value_BoolValue:
-				structValue.Field(i).Set(reflect.ValueOf(pointPayload[tag].GetBoolValue()))
-			}
+			err = decodePayloadValue(&field, payloadValue)
+		}
+		if err != nil {
+			return err
 		}
 	}
+	return nil
+}
+
+func decodeUUIDValue(field *reflect.Value, value *qdrant.PointId) error {
+	field.Set(reflect.ValueOf(value.GetUuid()))
+	return nil
+}
+
+func decodePayloadValue(field *reflect.Value, value *qdrant.Value) error {
+	switch value.Kind.(type) {
+	case *qdrant.Value_StringValue:
+		return decodeStringValue(field, value)
+	case *qdrant.Value_IntegerValue:
+		return decodeIntegerValue(field, value)
+	case *qdrant.Value_DoubleValue:
+		return decodeDoubleValue(field, value)
+	case *qdrant.Value_BoolValue:
+		return decodeBoolValue(field, value)
+	case *qdrant.Value_ListValue:
+		return decodeListValue(field, value)
+	default:
+		return fmt.Errorf("unexpected value type (%T)", value.Kind)
+	}
+}
+
+func decodeStringValue(field *reflect.Value, value *qdrant.Value) error {
+	stringValue := value.GetStringValue()
+	switch field.Interface().(type) {
+	case time.Time:
+		timeValue, err := time.Parse(time.RFC3339, stringValue)
+		if err != nil {
+			return fmt.Errorf("invalid Datetime value '%s' (cause: %w)", stringValue, err)
+		}
+		field.Set(reflect.ValueOf(timeValue))
+	default:
+		field.Set(reflect.ValueOf(stringValue))
+	}
+	return nil
+}
+
+func decodeIntegerValue(field *reflect.Value, value *qdrant.Value) error {
+	field.Set(reflect.ValueOf(value.GetIntegerValue()))
+	return nil
+}
+
+func decodeDoubleValue(field *reflect.Value, value *qdrant.Value) error {
+	field.Set(reflect.ValueOf(value.GetDoubleValue()))
+	return nil
+}
+
+func decodeBoolValue(field *reflect.Value, value *qdrant.Value) error {
+	field.Set(reflect.ValueOf(value.GetBoolValue()))
+	return nil
+}
+
+func decodeListValue(field *reflect.Value, value *qdrant.Value) error {
+	listValues := value.GetListValue().GetValues()
+	_ = listValues
 	return nil
 }
 

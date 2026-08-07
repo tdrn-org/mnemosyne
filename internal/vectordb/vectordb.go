@@ -28,6 +28,8 @@ import (
 	"github.com/tdrn-org/mnemosyne/config"
 )
 
+var waitCreateIndex bool = true
+
 type Store struct {
 	client *qdrant.Client
 	tenant string
@@ -76,6 +78,10 @@ func (s *Store) init(ctx context.Context, dimension uint64, reset bool) error {
 		return err
 	}
 	err = s.initKnowledgeCollection(ctx, dimension, reset)
+	if err != nil {
+		return err
+	}
+	err = s.initMemoryCollection(ctx, dimension, reset)
 	if err != nil {
 		return err
 	}

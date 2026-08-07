@@ -25,8 +25,8 @@ import (
 )
 
 func TestDocuments(t *testing.T) {
-	store, _ := testStore(t)
-	defer store.Close()
+	vectorDB, _ := testVectorDB(t)
+	defer vectorDB.Close()
 
 	path := "document.md"
 	document := &domain.Document{
@@ -35,14 +35,14 @@ func TestDocuments(t *testing.T) {
 		Hash: "1234567890",
 	}
 
-	d1, err := store.LookupDocument(t.Context(), document.Path)
+	d1, err := vectorDB.LookupDocument(t.Context(), document.Path)
 	require.NoError(t, err)
 	require.Nil(t, d1)
 
-	err = store.UpsertDocument(t.Context(), document)
+	err = vectorDB.UpsertDocument(t.Context(), document)
 	require.NoError(t, err)
 
-	d2, err := store.LookupDocument(t.Context(), document.Path)
+	d2, err := vectorDB.LookupDocument(t.Context(), document.Path)
 	require.NoError(t, err)
 	require.Equal(t, document, d2)
 }

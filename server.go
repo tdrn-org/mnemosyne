@@ -30,6 +30,7 @@ import (
 	"github.com/tdrn-org/mnemosyne/config"
 	"github.com/tdrn-org/mnemosyne/internal/adapters/middleware/mcp"
 	"github.com/tdrn-org/mnemosyne/internal/application/knowledge"
+	"github.com/tdrn-org/mnemosyne/internal/application/memory"
 	"github.com/tdrn-org/mnemosyne/internal/provider"
 	"github.com/tdrn-org/mnemosyne/internal/provider/ollama"
 	"github.com/tdrn-org/mnemosyne/internal/tokenizer"
@@ -42,9 +43,10 @@ type Server struct {
 	cfg                 *config.Config
 	httpServer          *httpserver.Instance
 	baseURL             *url.URL
-	vectorDBStore       *vectordb.Store
+	vectorDB            *vectordb.Store
 	embedder            provider.Embedder
 	knowledge           *knowledge.Knowledge
+	memory              *memory.Memory
 	jobTicker           *time.Ticker
 	jobTickerShutdown   chan any
 	jobTickerShutdownWG sync.WaitGroup
@@ -65,6 +67,7 @@ func StartServer(ctx context.Context, cfg *config.Config) (*Server, error) {
 		s.startVectorDB,
 		s.startHttpServer,
 		s.startKnowledge,
+		s.startMemory,
 		s.startMCPHandler,
 		s.startJobTicker,
 	}
@@ -134,19 +137,19 @@ func (s *Server) startProvider(ctx context.Context, cfg *config.Config) error {
 }
 
 func (s *Server) startVectorDB(ctx context.Context, cfg *config.Config) error {
-	vectorDBStore, err := vectordb.Open(&cfg.VectorDB, s.embedder.EmbeddingDimension(), true)
+	vectorDB, err := vectordb.Open(&cfg.VectorDB, s.embedder.EmbeddingDimension(), true)
 	if err != nil {
 		return err
 	}
-	s.vectorDBStore = vectorDBStore
+	s.vectorDB = vectorDB
 	return nil
 }
 
 func (s *Server) closeVectorDB() error {
-	if s.vectorDBStore == nil {
+	if s.vectorDB == nil {
 		return nil
 	}
-	return s.vectorDBStore.Close()
+	return s.vectorDB.Close()
 }
 
 func (s *Server) startHttpServer(ctx context.Context, cfg *config.Config) error {
@@ -185,7 +188,12 @@ func (s *Server) closeHttpServer() error {
 
 func (s *Server) startKnowledge(_ context.Context, cfg *config.Config) error {
 	tokenizer := &tokenizer.EstimateTokenizer{RunesPerToken: 4}
-	s.knowledge = knowledge.NewKnowledge(&cfg.Knowledge, s.vectorDBStore, tokenizer, s.embedder)
+	s.knowledge = knowledge.NewKnowledge(&cfg.Knowledge, s.vectorDB, tokenizer, s.embedder)
+	return nil
+}
+
+func (s *Server) startMemory(_ context.Context, cfg *config.Config) error {
+	s.memory = memory.NewMemory(&cfg.Memory, s.vectorDB, s.embedder)
 	return nil
 }
 

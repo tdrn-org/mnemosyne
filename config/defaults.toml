@@ -47,22 +47,18 @@ embedding_model = "embeddinggemma"
 embedding_dimension = 768
 
 [memory]
+
 [[memory.type]]
 name = "fact"
 ttl = "2160h"
+description = "Memories of type fact represent a well-known fact (e.g. a birthday date). As result they have a high TTL."
 
 [[memory.type]]
 name = "decision"
 ttl = "4320h"
+description = "Memories of type decision represent an explicitely taken decision (e.g. no commit without signature). As a result they have a high TTL."
 
 [[memory.type]]
 name = "session_summary"
 ttl = "720h"
-
-[[memory.type]]
-name = "emotional"
-ttl = "0h"
-
-[[memory.type]]
-name = "context"
-ttl = "168h"
+description = "Memories of type session_summary respresent an summarized session. They have a medium TTL as they are not that explicit."

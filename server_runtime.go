@@ -40,6 +40,10 @@ func (runtime *serverRuntime) Knowledge() domain.Knowledge {
 	return runtime.server.knowledge
 }
 
+func (runtime *serverRuntime) Memory() domain.MemoryStore {
+	return runtime.server.memory
+}
+
 func (runtime *serverRuntime) Logger() *slog.Logger {
 	return runtime.server.logger
 }

@@ -18,35 +18,41 @@ package vectordb_test
 
 import (
 	"testing"
+	"time"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/tdrn-org/mnemosyne/internal/domain"
 )
 
-func TestChunks(t *testing.T) {
+func TestMemories(t *testing.T) {
 	vectorDB, provider := testVectorDB(t)
 	defer vectorDB.Close()
 
-	path := "document.md"
-	chunk := &domain.Chunk{
-		ID:            uuid.NewString(),
-		Path:          path,
-		ChunkIndex:    0,
-		ChunkHash:     "1234567890",
-		DocumentTitle: "A section about everything",
-		HeadingPath:   []string{"A documment about everything"},
-		Tags:          []string{},
-		Links:         []string{},
-		Content:       "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.",
+	now := time.Now()
+	memory := &domain.Memory{
+		ID:         domain.MemoryID(),
+		Content:    "A memory of something",
+		Type:       "moment",
+		Trust:      0.5,
+		CreatedAt:  now,
+		ExpiresAt:  now.Add(time.Hour),
+		LastAccess: now,
 	}
-	vector, err := provider.Embed(t.Context(), chunk.Content)
+	vector, err := provider.Embed(t.Context(), memory.Content)
 	require.NoError(t, err)
 
-	err = vectorDB.UpsertChunk(t.Context(), chunk, vector...)
+	m1, err := vectorDB.LookupMemory(t.Context(), memory.ID)
+	require.NoError(t, err)
+	require.Nil(t, m1)
+
+	err = vectorDB.UpsertMemory(t.Context(), memory, vector...)
 	require.NoError(t, err)
 
-	chunks, err := vectorDB.SearchChunks(t.Context(), nil, nil, vector...)
+	m2, err := vectorDB.LookupMemory(t.Context(), memory.ID)
 	require.NoError(t, err)
-	require.Len(t, chunks, 1)
+	require.Equal(t, memory.ID, m2.ID)
+
+	memories, err := vectorDB.SearchMemories(t.Context(), nil, nil, nil, vector...)
+	require.NoError(t, err)
+	require.Len(t, memories, 1)
 }

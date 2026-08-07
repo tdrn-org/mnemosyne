@@ -16,8 +16,6 @@
 
 package config
 
-import "time"
-
 // MemoryConfig holds the configuration for the memory store.
 type MemoryConfig struct {
 	// Types defines the known memory types and their default TTLs.
@@ -27,15 +25,7 @@ type MemoryConfig struct {
 
 // MemoryTypeConfig defines a known memory type with its default expiry.
 type MemoryTypeConfig struct {
-	Name string        `toml:"name"`
-	TTL  time.Duration `toml:"ttl"`
-}
-
-// KnownMemoryTypes returns the configured memory types as a lookup map.
-func (cfg *MemoryConfig) KnownMemoryTypes() map[string]time.Duration {
-	known := make(map[string]time.Duration, len(cfg.Types))
-	for _, t := range cfg.Types {
-		known[t.Name] = t.TTL
-	}
-	return known
+	Name        string       `toml:"name"`
+	TTL         DurationSpec `toml:"ttl"`
+	Description string       `toml:"description"`
 }
