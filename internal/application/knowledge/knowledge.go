@@ -172,16 +172,16 @@ func (s *markdownSync) RunSync(ctx context.Context) {
 }
 
 func (s *markdownSync) walkSources(ctx context.Context, fn func(context.Context, string, string, []byte) error, path string, d fs.DirEntry, err0 error) error {
-	consider, err := s.considerPath(path, d, err0)
-	if !consider {
-		return err
-	}
 	pathLogger := s.logger.With(slog.String("path", path))
 	pathLogger.Debug("processing Markdown file")
 	relPath, err := filepath.Rel(s.Cfg.Path, path)
 	if err != nil {
 		pathLogger.Warn("failed to resolve relative path of Markdown file", slog.Any("err", err))
 		return nil
+	}
+	consider, err := s.considerPath(path, relPath, d, err0)
+	if !consider {
+		return err
 	}
 	source, err := os.ReadFile(path)
 	if err != nil {
@@ -227,12 +227,12 @@ func (s *markdownSync) syncSource(ctx context.Context, path, relPath string, sou
 	return nil
 }
 
-func (s *markdownSync) considerPath(path string, d fs.DirEntry, err0 error) (bool, error) {
+func (s *markdownSync) considerPath(path, relPath string, d fs.DirEntry, err0 error) (bool, error) {
 	pathLogger := s.logger.With(slog.String("path", path))
 	if err0 != nil {
 		return false, err0
 	}
-	if !s.Cfg.PathFilter.Match(path) {
+	if !s.Cfg.PathFilter.Match(relPath) {
 		if d.IsDir() {
 			pathLogger.Debug("ignoring directory")
 			return false, filepath.SkipDir
