@@ -76,7 +76,7 @@ func (s *Store) initMemoryCollection(ctx context.Context, dimension uint64, rese
 
 func (s *Store) UpsertMemory(ctx context.Context, memory *domain.Memory, embedding ...float32) error {
 	collectionName := s.collectionName(memoryCollection)
-	s.logger.Info("upserting chunk...", slog.String("collection", collectionName))
+	s.logger.Info("upserting memory...", slog.String("collection", collectionName))
 	point, err := EncodeToPoint(memory)
 	if err != nil {
 		return err
