@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"math"
 	"slices"
 	"strings"
 	"time"
@@ -103,7 +102,8 @@ func (m *Memory) ReinforceMemory(ctx context.Context, id string, trustDelta floa
 	if memory == nil {
 		return domain.ErrNoSuchMemory
 	}
-	memory.Trust = math.Max(0.0, math.Min(memory.Trust+trustDelta, 1.0))
+	memory.AdjustTrust(trustDelta)
+	memory.Touch()
 	return m.vectorDB.UpsertMemory(ctx, memory, vector...)
 }
 
@@ -115,8 +115,6 @@ func (m *Memory) TouchMemory(ctx context.Context, id string) error {
 	if memory == nil {
 		return domain.ErrNoSuchMemory
 	}
-	ttl := memory.ExpiresAt.Sub(memory.LastAccess)
-	memory.LastAccess = time.Now()
-	memory.ExpiresAt = memory.LastAccess.Add(ttl)
+	memory.Touch()
 	return m.vectorDB.UpsertMemory(ctx, memory, vector...)
 }

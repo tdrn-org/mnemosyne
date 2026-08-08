@@ -19,6 +19,7 @@ package domain
 import (
 	"context"
 	"errors"
+	"math"
 	"time"
 
 	"github.com/google/uuid"
@@ -50,6 +51,19 @@ type Memory struct {
 	ExpiresAt time.Time `json:"expires_at,omitempty"`
 	// LastAccess is updated every time the memory is accessed (for TTL reset).
 	LastAccess time.Time `json:"last_access"`
+}
+
+func (m *Memory) AdjustTrust(trustDelta float64) float64 {
+	m.Trust = math.Max(0.0, math.Min(m.Trust+trustDelta, 1.0))
+	return m.Trust
+}
+
+func (m *Memory) Touch() time.Time {
+	now := time.Now()
+	ttl := m.ExpiresAt.Sub(m.LastAccess)
+	m.LastAccess = now
+	m.ExpiresAt = m.LastAccess.Add(ttl)
+	return m.LastAccess
 }
 
 // RecallOptions controls how memories are retrieved.
