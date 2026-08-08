@@ -140,7 +140,6 @@ func (s *Store) SearchMemories(ctx context.Context, typeFilter *string, minTrust
 func (s *Store) DeleteMemory(ctx context.Context, id string) error {
 	_, err := s.client.Delete(ctx, &qdrant.DeletePoints{
 		CollectionName: s.collectionName(memoryCollection),
-		Wait:           &waitDelete,
 		Points:         qdrant.NewPointsSelector(qdrant.NewIDUUID(id)),
 	})
 	if err != nil {

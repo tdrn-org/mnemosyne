@@ -28,9 +28,7 @@ import (
 	"github.com/tdrn-org/mnemosyne/config"
 )
 
-var waitAlyways bool = true
-var waitCreateIndex bool = true
-var waitDelete bool = true
+var waitAlways bool = true
 
 type Store struct {
 	client *qdrant.Client
@@ -157,7 +155,7 @@ func (u *schemaUpdateFieldIndex) Apply(client *qdrant.Client, ctx context.Contex
 		indexLogger.Info("deleting index...")
 		_, err = client.DeleteFieldIndex(ctx, &qdrant.DeleteFieldIndexCollection{
 			CollectionName: u.CollectionName,
-			Wait:           &waitAlyways,
+			Wait:           &waitAlways,
 			FieldName:      u.FieldName,
 		})
 		if err != nil {
@@ -168,7 +166,7 @@ func (u *schemaUpdateFieldIndex) Apply(client *qdrant.Client, ctx context.Contex
 		indexLogger.Info("creating index...")
 		_, err := client.CreateFieldIndex(ctx, &qdrant.CreateFieldIndexCollection{
 			CollectionName: u.CollectionName,
-			Wait:           &waitCreateIndex,
+			Wait:           &waitAlways,
 			FieldName:      u.FieldName,
 			FieldType:      u.FieldType,
 		})
