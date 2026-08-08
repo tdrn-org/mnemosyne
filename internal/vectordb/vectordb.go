@@ -29,6 +29,7 @@ import (
 )
 
 var waitCreateIndex bool = true
+var waitDelete bool = true
 
 type Store struct {
 	client *qdrant.Client

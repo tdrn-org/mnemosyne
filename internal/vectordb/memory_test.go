@@ -29,10 +29,12 @@ func TestMemories(t *testing.T) {
 	defer vectorDB.Close()
 
 	now := time.Now()
+	content := "A memory of something"
+	typ := "moment"
 	memory := &domain.Memory{
-		ID:         domain.MemoryID(),
-		Content:    "A memory of something",
-		Type:       "moment",
+		ID:         domain.MemoryID(typ, content),
+		Content:    content,
+		Type:       typ,
 		Trust:      0.5,
 		CreatedAt:  now,
 		ExpiresAt:  now.Add(time.Hour),
@@ -55,4 +57,7 @@ func TestMemories(t *testing.T) {
 	memories, err := vectorDB.SearchMemories(t.Context(), nil, nil, nil, vector...)
 	require.NoError(t, err)
 	require.Len(t, memories, 1)
+
+	err = vectorDB.DeleteMemory(t.Context(), memory.ID)
+	require.NoError(t, err)
 }

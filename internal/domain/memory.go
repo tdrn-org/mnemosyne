@@ -18,10 +18,13 @@ package domain
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+var ErrNoSuchMemory error = errors.New("no such memory")
 
 type MemoryType struct {
 	Name        string        `json:"name"`
@@ -56,8 +59,8 @@ type RecallOptions struct {
 	Limit      *uint64
 }
 
-func MemoryID() string {
-	return uuid.NewString()
+func MemoryID(typ, content string) string {
+	return uuid.NewSHA1(uuid.NewSHA1(uuid.Nil, []byte(typ)), []byte(content)).String()
 }
 
 // MemoryStore is the domain interface for the memory collection.

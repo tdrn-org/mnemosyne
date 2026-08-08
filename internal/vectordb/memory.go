@@ -154,3 +154,15 @@ func (s *Store) SearchMemories(ctx context.Context, typeFilter *string, minTrust
 	}
 	return memories, nil
 }
+
+func (s *Store) DeleteMemory(ctx context.Context, id string) error {
+	_, err := s.client.Delete(ctx, &qdrant.DeletePoints{
+		CollectionName: s.collectionName(memoryCollection),
+		Wait:           &waitDelete,
+		Points:         qdrant.NewPointsSelector(qdrant.NewIDUUID(id)),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to delete memory (cause: %w)", err)
+	}
+	return nil
+}

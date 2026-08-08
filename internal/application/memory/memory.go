@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 	"slices"
 	"strings"
 	"time"
@@ -64,7 +65,12 @@ func (m *Memory) ListMemoryTypes(ctx context.Context) ([]domain.MemoryType, erro
 
 func (m *Memory) RememberMemory(ctx context.Context, memory *domain.Memory) error {
 	if memory.ID == "" {
-		memory.ID = domain.MemoryID()
+		memory.ID = domain.MemoryID(memory.Type, memory.Content)
+	}
+	for _, memoryType := range m.cfg.Types {
+		if memory.Type == memoryType.Name {
+			memory.ExpiresAt = memory.LastAccess.Add(time.Duration(memoryType.TTL))
+		}
 	}
 	embedding, err := m.embedder.Embed(ctx, memory.Content)
 	if err != nil {
@@ -74,7 +80,7 @@ func (m *Memory) RememberMemory(ctx context.Context, memory *domain.Memory) erro
 }
 
 func (m *Memory) ForgetMemory(ctx context.Context, id string) error {
-	return nil
+	return m.vectorDB.DeleteMemory(ctx, id)
 }
 
 func (m *Memory) RecallMemories(ctx context.Context, query string, opts domain.RecallOptions) ([]domain.Memory, error) {
@@ -90,9 +96,25 @@ func (m *Memory) RecallMemories(ctx context.Context, query string, opts domain.R
 }
 
 func (m *Memory) ReinforceMemory(ctx context.Context, id string, trustDelta float64) error {
-	return nil
+	memory, err := m.vectorDB.LookupMemory(ctx, id)
+	if err != nil {
+		return err
+	}
+	if memory == nil {
+		return domain.ErrNoSuchMemory
+	}
+	memory.Trust = math.Min(memory.Trust+trustDelta, 1.0)
+	return m.RememberMemory(ctx, memory)
 }
 
 func (m *Memory) TouchMemory(ctx context.Context, id string) error {
-	return nil
+	memory, err := m.vectorDB.LookupMemory(ctx, id)
+	if err != nil {
+		return err
+	}
+	if memory == nil {
+		return domain.ErrNoSuchMemory
+	}
+	memory.LastAccess = time.Now()
+	return m.RememberMemory(ctx, memory)
 }

@@ -71,7 +71,7 @@ func registerMemoryTools(server *mcp.Server, runtime Runtime) {
 			trust = *input.Trust
 		}
 		memory := &domain.Memory{
-			ID:         domain.MemoryID(),
+			ID:         domain.MemoryID(input.Type, input.Content),
 			Content:    input.Content,
 			Type:       input.Type,
 			Trust:      trust,
