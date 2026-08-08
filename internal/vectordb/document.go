@@ -19,7 +19,6 @@ package vectordb
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/qdrant/go-client/qdrant"
@@ -28,30 +27,15 @@ import (
 
 const documentsCollection string = "documents"
 
-func (s *Store) initDocumentsCollection(ctx context.Context, reset bool) error {
+func (s *Store) documentCollectionUpdates(reset bool) []schemaUpdate {
+	updates := make([]schemaUpdate, 0)
 	collectionName := s.collectionName(documentsCollection)
-	s.logger.Info("intializing collection...", slog.String("collection", collectionName))
-	exists, err := s.client.CollectionExists(ctx, collectionName)
-	if err != nil {
-		return fmt.Errorf("failed to check collection '%s' (cause: %w)", collectionName, err)
-	}
-	if exists {
-		if !reset {
-			return nil
-		}
-		err = s.client.DeleteCollection(ctx, collectionName)
-		if err != nil {
-			return fmt.Errorf("failed to delete collection '%s' (cause: %w)", collectionName, err)
-		}
-	}
-	err = s.client.CreateCollection(ctx, &qdrant.CreateCollection{
+	updates = append(updates, &schemaUpdateCollection{
 		CollectionName: collectionName,
 		VectorsConfig:  qdrant.NewVectorsConfigMap(map[string]*qdrant.VectorParams{}),
+		Reset:          reset,
 	})
-	if err != nil {
-		return fmt.Errorf("failed to create collection '%s' (cause: %w)", collectionName, err)
-	}
-	return nil
+	return updates
 }
 
 func DocumentID(path string) string {

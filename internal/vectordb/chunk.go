@@ -27,42 +27,24 @@ import (
 
 const knowledgeCollection string = "knowledge"
 
-func (s *Store) initKnowledgeCollection(ctx context.Context, dimension uint64, reset bool) error {
+func (s *Store) knowledgeCollectionUpdates(dimension uint64, reset bool) []schemaUpdate {
+	updates := make([]schemaUpdate, 0)
 	collectionName := s.collectionName(knowledgeCollection)
-	s.logger.Info("intializing collection...", slog.String("collection", collectionName))
-	exists, err := s.client.CollectionExists(ctx, collectionName)
-	if err != nil {
-		return fmt.Errorf("failed to check collection '%s' (cause: %w)", collectionName, err)
-	}
-	if exists {
-		if !reset {
-			return nil
-		}
-		err = s.client.DeleteCollection(ctx, collectionName)
-		if err != nil {
-			return fmt.Errorf("failed to delete collection '%s' (cause: %w)", collectionName, err)
-		}
-	}
-	err = s.client.CreateCollection(ctx, &qdrant.CreateCollection{
+	updates = append(updates, &schemaUpdateCollection{
 		CollectionName: collectionName,
 		VectorsConfig: qdrant.NewVectorsConfig(&qdrant.VectorParams{
 			Size:     dimension,
 			Distance: qdrant.Distance_Cosine,
 		}),
+		Reset: reset,
 	})
-	if err != nil {
-		return fmt.Errorf("failed to create collection '%s' (cause: %w)", collectionName, err)
-	}
-	_, err = s.client.CreateFieldIndex(ctx, &qdrant.CreateFieldIndexCollection{
+	updates = append(updates, &schemaUpdateFieldIndex{
 		CollectionName: collectionName,
-		Wait:           &waitCreateIndex,
 		FieldName:      "store",
 		FieldType:      qdrant.FieldType_FieldTypeKeyword.Enum(),
+		Reset:          reset,
 	})
-	if err != nil {
-		return fmt.Errorf("failed to create 'store' index in collection '%s' (cause: %w)", collectionName, err)
-	}
-	return nil
+	return updates
 }
 
 func (s *Store) UpsertChunk(ctx context.Context, chunk *domain.Chunk, embedding ...float32) error {

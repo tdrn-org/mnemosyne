@@ -28,6 +28,7 @@ import (
 	"github.com/tdrn-org/mnemosyne/config"
 )
 
+var waitAlyways bool = true
 var waitCreateIndex bool = true
 var waitDelete bool = true
 
@@ -47,7 +48,7 @@ func Open(cfg *config.VectorDBConfig, dimension uint64, reset bool) (*Store, err
 		tenant: cfg.Tenant,
 		logger: slog.With(slog.String("vectordb", "qdrant"), slog.String("address", cfg.Address)),
 	}
-	err = store.init(context.Background(), dimension, reset)
+	err = store.update(context.Background(), dimension, reset)
 	if err != nil {
 		return nil, errors.Join(err, store.Close())
 	}
@@ -73,22 +74,6 @@ func qdrantConfig(cfg *config.VectorDBConfig) *qdrant.Config {
 	return config
 }
 
-func (s *Store) init(ctx context.Context, dimension uint64, reset bool) error {
-	err := s.initDocumentsCollection(ctx, reset)
-	if err != nil {
-		return err
-	}
-	err = s.initKnowledgeCollection(ctx, dimension, reset)
-	if err != nil {
-		return err
-	}
-	err = s.initMemoryCollection(ctx, dimension, reset)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (s *Store) Close() error {
 	return s.client.Close()
 }
@@ -98,4 +83,98 @@ func (s *Store) collectionName(name string) string {
 		return name
 	}
 	return s.tenant + "_" + name
+}
+
+func (s *Store) update(ctx context.Context, dimension uint64, reset bool) error {
+	updates := s.documentCollectionUpdates(reset)
+	updates = append(updates, s.knowledgeCollectionUpdates(dimension, reset)...)
+	updates = append(updates, s.memoryCollectionUpdates(dimension, reset)...)
+	for _, update := range updates {
+		err := update.Apply(s.client, ctx, s.logger)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type schemaUpdate interface {
+	Apply(client *qdrant.Client, ctx context.Context, logger *slog.Logger) error
+}
+
+type schemaUpdateCollection struct {
+	CollectionName string
+	VectorsConfig  *qdrant.VectorsConfig
+	Reset          bool
+}
+
+func (u *schemaUpdateCollection) Apply(client *qdrant.Client, ctx context.Context, logger *slog.Logger) error {
+	collectionLogger := logger.With(slog.String("collection", u.CollectionName))
+	collectionLogger.Info("updating collection...")
+	exists, err := client.CollectionExists(ctx, u.CollectionName)
+	if err != nil {
+		return fmt.Errorf("failed to check collection '%s' (cause: %w)", u.CollectionName, err)
+	}
+	if exists && u.Reset {
+		collectionLogger.Info("deleting collection...")
+		err = client.DeleteCollection(ctx, u.CollectionName)
+		if err != nil {
+			return fmt.Errorf("failed to delete collection '%s' (cause: %w)", u.CollectionName, err)
+		}
+	}
+	if !exists || u.Reset {
+		collectionLogger.Info("creating collection...")
+		err = client.CreateCollection(ctx, &qdrant.CreateCollection{
+			CollectionName: u.CollectionName,
+			VectorsConfig:  u.VectorsConfig,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create collection '%s' (cause: %w)", u.CollectionName, err)
+		}
+	}
+	return nil
+}
+
+type schemaUpdateFieldIndex struct {
+	CollectionName string
+	FieldName      string
+	FieldType      *qdrant.FieldType
+	Reset          bool
+}
+
+func (u *schemaUpdateFieldIndex) Apply(client *qdrant.Client, ctx context.Context, logger *slog.Logger) error {
+	indexLogger := logger.With(slog.String("collection", u.CollectionName), slog.String("field", u.FieldName))
+	indexLogger.Info("updating index...")
+	info, err := client.GetCollectionInfo(ctx, u.CollectionName)
+	if err != nil {
+		return fmt.Errorf("failed to get info for collection '%s' (cause: %w)", u.CollectionName, err)
+	}
+	exists := false
+	if info.PayloadSchema != nil {
+		_, exists = info.PayloadSchema[u.FieldName]
+	}
+	if exists && u.Reset {
+		indexLogger.Info("deleting index...")
+		_, err = client.DeleteFieldIndex(ctx, &qdrant.DeleteFieldIndexCollection{
+			CollectionName: u.CollectionName,
+			Wait:           &waitAlyways,
+			FieldName:      u.FieldName,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to delete index '%s:%s' (cause: %w)", u.CollectionName, u.FieldName, err)
+		}
+	}
+	if !exists || u.Reset {
+		indexLogger.Info("creating index...")
+		_, err := client.CreateFieldIndex(ctx, &qdrant.CreateFieldIndexCollection{
+			CollectionName: u.CollectionName,
+			Wait:           &waitCreateIndex,
+			FieldName:      u.FieldName,
+			FieldType:      u.FieldType,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create index '%s:%s' (cause: %w)", u.CollectionName, u.FieldName, err)
+		}
+	}
+	return nil
 }
