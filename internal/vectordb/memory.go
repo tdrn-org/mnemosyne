@@ -94,24 +94,27 @@ func (s *Store) UpsertMemory(ctx context.Context, memory *domain.Memory, embeddi
 	return nil
 }
 
-func (s *Store) LookupMemory(ctx context.Context, id string) (*domain.Memory, error) {
+func (s *Store) LookupMemory(ctx context.Context, id string) (*domain.Memory, []float32, error) {
 	res, err := s.client.Get(ctx, &qdrant.GetPoints{
 		CollectionName: s.collectionName(memoryCollection),
 		Ids:            []*qdrant.PointId{qdrant.NewID(id)},
 		WithPayload:    qdrant.NewWithPayload(true),
+		WithVectors:    qdrant.NewWithVectors(true),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to lookup memory '%s' (cause: %w)", id, err)
+		return nil, nil, fmt.Errorf("failed to lookup memory '%s' (cause: %w)", id, err)
 	}
 	if len(res) == 0 {
-		return nil, nil
+		return nil, nil, nil
 	}
 	memory := &domain.Memory{}
-	err = DecodeFromPoint(memory, res[0])
+	res0 := res[0]
+	err = DecodeFromPoint(memory, res0)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return memory, nil
+	vector := res0.GetVectors().GetVector().GetDense().GetData()
+	return memory, vector, nil
 }
 
 func (s *Store) SearchMemories(ctx context.Context, typeFilter *string, minTrust *float64, limit *uint64, vector ...float32) ([]domain.Memory, error) {

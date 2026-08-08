@@ -43,14 +43,14 @@ func TestMemories(t *testing.T) {
 	vector, err := provider.Embed(t.Context(), memory.Content)
 	require.NoError(t, err)
 
-	m1, err := vectorDB.LookupMemory(t.Context(), memory.ID)
+	m1, _, err := vectorDB.LookupMemory(t.Context(), memory.ID)
 	require.NoError(t, err)
 	require.Nil(t, m1)
 
 	err = vectorDB.UpsertMemory(t.Context(), memory, vector...)
 	require.NoError(t, err)
 
-	m2, err := vectorDB.LookupMemory(t.Context(), memory.ID)
+	m2, _, err := vectorDB.LookupMemory(t.Context(), memory.ID)
 	require.NoError(t, err)
 	require.Equal(t, memory.ID, m2.ID)
 

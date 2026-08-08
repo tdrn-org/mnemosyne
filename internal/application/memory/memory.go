@@ -96,25 +96,27 @@ func (m *Memory) RecallMemories(ctx context.Context, query string, opts domain.R
 }
 
 func (m *Memory) ReinforceMemory(ctx context.Context, id string, trustDelta float64) error {
-	memory, err := m.vectorDB.LookupMemory(ctx, id)
+	memory, vector, err := m.vectorDB.LookupMemory(ctx, id)
 	if err != nil {
 		return err
 	}
 	if memory == nil {
 		return domain.ErrNoSuchMemory
 	}
-	memory.Trust = math.Min(memory.Trust+trustDelta, 1.0)
-	return m.RememberMemory(ctx, memory)
+	memory.Trust = math.Max(0.0, math.Min(memory.Trust+trustDelta, 1.0))
+	return m.vectorDB.UpsertMemory(ctx, memory, vector...)
 }
 
 func (m *Memory) TouchMemory(ctx context.Context, id string) error {
-	memory, err := m.vectorDB.LookupMemory(ctx, id)
+	memory, vector, err := m.vectorDB.LookupMemory(ctx, id)
 	if err != nil {
 		return err
 	}
 	if memory == nil {
 		return domain.ErrNoSuchMemory
 	}
+	ttl := memory.ExpiresAt.Sub(memory.LastAccess)
 	memory.LastAccess = time.Now()
-	return m.RememberMemory(ctx, memory)
+	memory.ExpiresAt = memory.LastAccess.Add(ttl)
+	return m.vectorDB.UpsertMemory(ctx, memory, vector...)
 }
