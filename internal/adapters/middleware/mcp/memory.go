@@ -153,17 +153,17 @@ func registerMemoryTools(server *mcp.Server, runtime Runtime) {
 		}, map[string]any{"id": input.ID}, nil
 	})
 
-	// reinforce_memory: adjust trust score
+	// reinforce_memory: adjust trust score and refresh timestamp
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "reinforce_memory",
-		Description: "Adjusts the trust score of a stored memory by a delta value. Positive deltas increase trust (e.g. +0.1 for confirmed facts), negative deltas decrease it. Trust is clamped to [0.0, 1.0]. Also updates the LastAccess timestamp (equivalent to touching the memory). Use this to build up confidence in memories over time or to mark memories as unreliable.",
+		Description: "Provides feedback on a stored memory. Adjusts the trust score by a delta value and refreshes the LastAccess timestamp (extends TTL). Positive deltas increase trust (e.g. +0.1 for confirmed facts), negative deltas decrease it. Trust is clamped to [0.0, 1.0]. Pass 0.0 to simply mark the memory as still relevant without changing trust — this is the recommended reflex after a successful recall. Use this to build up confidence in memories over time or to let stale ones decay.",
 		InputSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
-				"id":          map[string]any{"type": "string", "description": "The ID of the memory to adjust (returned by remember_memory)."},
-				"trust_delta": map[string]any{"type": "number", "description": "The trust adjustment value. Positive values (e.g. 0.1) increase trust, negative values (e.g. -0.1) decrease it. Trust is always clamped to [0.0, 1.0]."},
+				"id":          map[string]any{"type": "string", "description": "The ID of the memory to provide feedback on (returned by remember_memory)."},
+				"trust_delta": map[string]any{"type": "number", "description": "The trust adjustment value. Positive (e.g. 0.1) increases trust, negative (e.g. -0.1) decreases it. Use 0.0 to just refresh TTL without changing trust. Default: 0.0 (touch only)."},
 			},
-			"required": []string{"id", "trust_delta"},
+			"required": []string{"id"},
 		},
 	}, func(ctx context.Context, _ *mcp.CallToolRequest, input struct {
 		ID         string  `json:"id"`
@@ -177,29 +177,5 @@ func registerMemoryTools(server *mcp.Server, runtime Runtime) {
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: text}},
 		}, map[string]any{"id": input.ID, "trust_delta": input.TrustDelta}, nil
-	})
-
-	// touch_memory: refresh last access timestamp
-	mcp.AddTool(server, &mcp.Tool{
-		Name:        "touch_memory",
-		Description: "Updates the LastAccess timestamp of a memory without changing its content or trust score. The memory's TTL is preserved — ExpiresAt is shifted forward by the same duration as the time since last access. Use this to mark memories as still relevant and prevent TTL-based expiry.",
-		InputSchema: map[string]any{
-			"type": "object",
-			"properties": map[string]any{
-				"id": map[string]any{"type": "string", "description": "The ID of the memory to touch (returned by remember_memory)."},
-			},
-			"required": []string{"id"},
-		},
-	}, func(ctx context.Context, _ *mcp.CallToolRequest, input struct {
-		ID string `json:"id"`
-	}) (*mcp.CallToolResult, any, error) {
-		err := runtime.Memory().TouchMemory(ctx, input.ID)
-		if err != nil {
-			return nil, nil, fmt.Errorf("touching memory: %w", err)
-		}
-		text := fmt.Sprintf("Memory '%s' touched", input.ID)
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{&mcp.TextContent{Text: text}},
-		}, map[string]any{"id": input.ID}, nil
 	})
 }
