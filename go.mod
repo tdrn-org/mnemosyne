@@ -4,8 +4,9 @@ go 1.26.5
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/tdrn-org/go-log v0.5.9
+	github.com/tdrn-org/go-log v0.6.0
 	github.com/yuin/goldmark v1.8.5
+	google.golang.org/protobuf v1.36.11
 )
 
 require (
@@ -34,7 +35,6 @@ require (
 	golang.org/x/time v0.15.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260807164820-c8921c73eeea // indirect
 	google.golang.org/grpc v1.83.0 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
