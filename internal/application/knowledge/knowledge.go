@@ -27,6 +27,7 @@ import (
 	"slices"
 	"strings"
 	"text/template"
+	"time"
 	"unicode/utf8"
 
 	"github.com/tdrn-org/mnemosyne/config"
@@ -128,10 +129,15 @@ func (k *Knowledge) limitDocument(document string, limit *int) string {
 	return document
 }
 
-func (k *Knowledge) Sync(ctx context.Context) {
+func (k *Knowledge) Sync(ctx context.Context, frequency time.Duration) {
 	k.logger.Info("syncing sources...")
+	now := time.Now()
+	last := now.Add(-frequency)
 	for _, markdownSync := range k.markdownSyncs {
-		markdownSync.RunSync(ctx)
+		next := markdownSync.Cfg.Schedule.Next(last)
+		if next.Before(now) {
+			markdownSync.RunSync(ctx)
+		}
 	}
 }
 

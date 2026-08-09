@@ -216,7 +216,7 @@ func (s *Server) startJobTicker(_ context.Context, cfg *config.Config) error {
 			case <-s.jobTickerShutdown:
 				stopped = true
 			case <-s.jobTicker.C:
-				s.runJobs()
+				s.runJobs(schedule)
 			}
 		}
 		s.logger.Info("job ticker stopped")
@@ -232,12 +232,12 @@ func (s *Server) shutdownJobTicker(_ context.Context) error {
 	return nil
 }
 
-func (s *Server) runJobs() {
+func (s *Server) runJobs(frequency time.Duration) {
 	s.logger.Info("running jobs...")
 	ctx := context.Background()
 	for _, job := range s.jobs {
-		job(ctx)
+		job(ctx, frequency)
 	}
 }
 
-type jobFunc func(ctx context.Context)
+type jobFunc func(ctx context.Context, frequency time.Duration)

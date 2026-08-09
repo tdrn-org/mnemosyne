@@ -18,6 +18,7 @@ package knowledge_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/gorhill/cronexpr"
 	"github.com/stretchr/testify/require"
@@ -46,7 +47,7 @@ func TestKnowledgeSync(t *testing.T) {
 		},
 	}
 	knowledge := knowledge.NewKnowledge(cfg, store, tokenizer, embedder)
-	knowledge.Sync(t.Context())
+	knowledge.Sync(t.Context(), time.Hour)
 }
 
 func testStore(t *testing.T) (*vectordb.Store, provider.Embedder) {
