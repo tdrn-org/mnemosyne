@@ -4,7 +4,7 @@ go 1.26.5
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/tdrn-org/go-log v0.5.8
+	github.com/tdrn-org/go-log v0.5.9
 	github.com/yuin/goldmark v1.8.5
 )
 
@@ -48,9 +48,9 @@ require (
 	github.com/qdrant/go-client v1.19.0
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.11.1
-	github.com/tdrn-org/go-conf v0.0.7
+	github.com/tdrn-org/go-conf v0.0.8
 	github.com/tdrn-org/go-diff v0.1.4
-	github.com/tdrn-org/go-httpserver v0.1.2
-	github.com/tdrn-org/go-tlsconf v0.0.11 // indirect
+	github.com/tdrn-org/go-httpserver v0.1.3
+	github.com/tdrn-org/go-tlsconf v0.0.12 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 )
