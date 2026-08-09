@@ -118,3 +118,11 @@ func (m *Memory) TouchMemory(ctx context.Context, id string) error {
 	memory.Touch()
 	return m.vectorDB.UpsertMemory(ctx, memory, vector...)
 }
+
+func (m *Memory) Sync(ctx context.Context, _ time.Duration) {
+	m.logger.Info("discarding expired memories...")
+	err := m.vectorDB.DeleteExpiredMemories(ctx, time.Now())
+	if err != nil {
+		m.logger.Warn("failed to discard expired memories", slog.Any("err", err))
+	}
+}

@@ -20,9 +20,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/qdrant/go-client/qdrant"
 	"github.com/tdrn-org/mnemosyne/internal/domain"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const memoryCollection string = "memory"
@@ -48,6 +50,12 @@ func (s *Store) memoryCollectionUpdates(dimension uint64, reset bool) []schemaUp
 		CollectionName: collectionName,
 		FieldName:      "trust",
 		FieldType:      qdrant.FieldType_FieldTypeFloat.Enum(),
+		Reset:          reset,
+	})
+	updates = append(updates, &schemaUpdateFieldIndex{
+		CollectionName: collectionName,
+		FieldName:      "expires_at",
+		FieldType:      qdrant.FieldType_FieldTypeDatetime.Enum(),
 		Reset:          reset,
 	})
 	return updates
@@ -144,6 +152,30 @@ func (s *Store) DeleteMemory(ctx context.Context, id string) error {
 	})
 	if err != nil {
 		return fmt.Errorf("failed to delete memory (cause: %w)", err)
+	}
+	return nil
+}
+
+func (s *Store) DeleteExpiredMemories(ctx context.Context, now time.Time) error {
+	nowTS := timestamppb.New(now)
+	_, err := s.client.Delete(ctx, &qdrant.DeletePoints{
+		CollectionName: s.collectionName(memoryCollection),
+		Points: &qdrant.PointsSelector{
+			PointsSelectorOneOf: &qdrant.PointsSelector_Filter{
+				Filter: &qdrant.Filter{
+					Must: []*qdrant.Condition{
+						qdrant.NewDatetimeRange(
+							"expires_at", &qdrant.DatetimeRange{
+								Lt: nowTS,
+							},
+						),
+					},
+				},
+			},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to delete expired memories (cause: %w)", err)
 	}
 	return nil
 }

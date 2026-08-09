@@ -58,6 +58,9 @@ func TestMemories(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, memories, 1)
 
+	err = vectorDB.DeleteExpiredMemories(t.Context(), time.Now())
+	require.NoError(t, err)
+
 	err = vectorDB.DeleteMemory(t.Context(), memory.ID)
 	require.NoError(t, err)
 }

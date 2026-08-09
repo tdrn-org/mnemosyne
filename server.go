@@ -207,6 +207,7 @@ func (s *Server) startJobTicker(_ context.Context, cfg *config.Config) error {
 	s.logger.Info("starting job ticker...", slog.String("schedule", schedule.String()))
 	s.jobs = []jobFunc{
 		s.knowledge.Sync,
+		s.memory.Sync,
 	}
 	s.jobTicker = time.NewTicker(schedule)
 	s.jobTickerShutdown = make(chan any)

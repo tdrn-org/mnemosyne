@@ -74,7 +74,7 @@ func encodeSliceOrArray(field reflect.Value) []any {
 func encodeInterface(field reflect.Value) any {
 	switch v := field.Interface().(type) {
 	case time.Time:
-		return v.Format(time.RFC3339)
+		return encodeDatetime(v)
 	default:
 		return v
 	}
@@ -135,7 +135,7 @@ func decodeStringValue(field *reflect.Value, value *qdrant.Value) error {
 	stringValue := value.GetStringValue()
 	switch field.Interface().(type) {
 	case time.Time:
-		timeValue, err := time.Parse(time.RFC3339, stringValue)
+		timeValue, err := decodeDatetime(stringValue)
 		if err != nil {
 			return fmt.Errorf("invalid Datetime value '%s' (cause: %w)", stringValue, err)
 		}
@@ -177,4 +177,12 @@ func safeValueOf(v any) (reflect.Value, error) {
 		return vValue, errors.New("invalid target; must be pointer to struct")
 	}
 	return vValue, nil
+}
+
+func encodeDatetime(t time.Time) string {
+	return t.Format(time.RFC3339)
+}
+
+func decodeDatetime(s string) (time.Time, error) {
+	return time.Parse(time.RFC3339, s)
 }
