@@ -40,7 +40,7 @@ func applyLoggingConfig(cfg *config.LoggingConfig) {
 		SyslogAddress:  cfg.SyslogAddress,
 		SyslogEncoding: cfg.SyslogEncoding,
 		SyslogFacility: cfg.SyslogFacility,
-		SyslogAppName:  reflect.TypeFor[Server]().PkgPath(),
+		SyslogAppName:  reflect.TypeFor[Server]().Name(),
 	}
 	logger, _ := logConfig.GetLogger(loglevel.LevelVar())
 	slog.SetDefault(logger)
