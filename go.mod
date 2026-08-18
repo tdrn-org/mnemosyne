@@ -44,7 +44,7 @@ require (
 	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/modelcontextprotocol/go-sdk v1.7.0
-	github.com/ollama/ollama v0.32.6
+	github.com/ollama/ollama v0.32.13
 	github.com/qdrant/go-client v1.19.0
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.11.1
