@@ -67,7 +67,7 @@ func (m *Memory) RememberMemory(ctx context.Context, memory *domain.Memory) erro
 		memory.ID = domain.MemoryID(memory.Type, memory.Content)
 	}
 	for _, memoryType := range m.cfg.Types {
-		if memory.Type == memoryType.Name {
+		if memory.Type == memoryType.Name && memoryType.TTL > 0 {
 			memory.ExpiresAt = memory.LastAccess.Add(time.Duration(memoryType.TTL))
 		}
 	}

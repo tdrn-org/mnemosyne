@@ -18,10 +18,12 @@ package vectordb_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/qdrant/go-client/qdrant"
 	"github.com/stretchr/testify/require"
+	"github.com/tdrn-org/mnemosyne/internal/domain"
 	"github.com/tdrn-org/mnemosyne/internal/vectordb"
 )
 
@@ -60,6 +62,38 @@ func TestDecoding(t *testing.T) {
 	require.Equal(t, point.Payload["string_value"].GetStringValue(), v.StringValue)
 	require.Equal(t, point.Payload["int_value"].GetIntegerValue(), v.IntValue)
 	require.Equal(t, point.Payload["bool_value"].GetBoolValue(), v.BoolValue)
+}
+
+func TestMemoryEncodingOmitEmpty(t *testing.T) {
+	never := &domain.Memory{
+		ID:      uuid.NewString(),
+		Content: "an emotional moment",
+		Type:    "emotional",
+		Trust:   1.0,
+	}
+	point, err := vectordb.EncodeToPoint(never)
+	require.NoError(t, err)
+	_, hasExpires := point.Payload["expires_at"]
+	require.False(t, hasExpires, "zero ExpiresAt must be omitted (never)")
+	_, hasLabels := point.Payload["labels"]
+	require.False(t, hasLabels, "empty Labels must be omitted")
+
+	expiring := &domain.Memory{
+		ID:        uuid.NewString(),
+		Content:   "a fact",
+		Type:      "fact",
+		Trust:     0.9,
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+		Labels:    []string{"x", "y"},
+	}
+	point2, err := vectordb.EncodeToPoint(expiring)
+	require.NoError(t, err)
+	_, hasExpiresClean := point2.Payload["expires_at"]
+	require.True(t, hasExpiresClean, "expires_at must be present under clean key")
+	_, hasExpiresRaw := point2.Payload["expires_at,omitempty"]
+	require.False(t, hasExpiresRaw, "payload key must not contain ',omitempty'")
+	labels := point2.Payload["labels"].GetListValue().GetValues()
+	require.Len(t, labels, 2)
 }
 
 type EncodingTestStruct struct {

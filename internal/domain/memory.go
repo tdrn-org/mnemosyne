@@ -60,6 +60,10 @@ func (m *Memory) AdjustTrust(trustDelta float64) float64 {
 
 func (m *Memory) Touch() time.Time {
 	now := time.Now()
+	if m.ExpiresAt.IsZero() {
+		m.LastAccess = now
+		return m.LastAccess
+	}
 	ttl := m.ExpiresAt.Sub(m.LastAccess)
 	m.LastAccess = now
 	m.ExpiresAt = m.LastAccess.Add(ttl)

@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/qdrant/go-client/qdrant"
@@ -46,15 +47,19 @@ func EncodeToPoint(v any) (*qdrant.PointStruct, error) {
 		if tag == "" || tag == "-" {
 			continue
 		}
-		if tag == "id" {
-			point.Id = qdrant.NewID(structValue.Field(i).String())
+		name, options, _ := strings.Cut(tag, ",")
+		value := structValue.Field(i)
+		if strings.Contains(options, "omitempty") && value.IsZero() {
+			continue
+		}
+		if name == "id" {
+			point.Id = qdrant.NewID(value.String())
 		} else {
-			field := structValue.Field(i)
-			switch field.Kind() {
+			switch value.Kind() {
 			case reflect.Slice, reflect.Array:
-				payload[tag] = encodeSliceOrArray(field)
+				payload[name] = encodeSliceOrArray(value)
 			default:
-				payload[tag] = encodeInterface(field)
+				payload[name] = encodeInterface(value)
 			}
 		}
 	}
@@ -94,12 +99,13 @@ func DecodeFromPoint(v any, point Point) error {
 		if tag == "" || tag == "-" {
 			continue
 		}
+		name, _, _ := strings.Cut(tag, ",")
 		field := structValue.Field(i)
 		pointID := point.GetId()
 		pointPayload := point.GetPayload()
-		if tag == "id" {
+		if name == "id" {
 			err = decodeUUIDValue(&field, pointID)
-		} else if payloadValue, ok := pointPayload[tag]; ok {
+		} else if payloadValue, ok := pointPayload[name]; ok {
 			err = decodePayloadValue(&field, payloadValue)
 		}
 		if err != nil {
