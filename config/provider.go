@@ -17,8 +17,7 @@
 package config
 
 import (
-	"fmt"
-	"log/slog"
+	"github.com/tdrn-org/go-config-toml"
 )
 
 type ProviderName string
@@ -41,40 +40,32 @@ type DemoProviderConfig struct {
 }
 
 type OllamaProviderConfig struct {
-	BaseURL            URLSpec `toml:"base_url"`
-	APIKey             string  `toml:"api_key"`
-	EmbeddingModel     string  `toml:"embedding_model"`
-	EmbeddingDimension uint64  `toml:"embedding_dimension"`
+	BaseURL            config.URLSpec `toml:"base_url"`
+	APIKey             string         `toml:"api_key"`
+	EmbeddingModel     string         `toml:"embedding_model"`
+	EmbeddingDimension uint64         `toml:"embedding_dimension"`
 }
 
-var knownProviderNames map[string]ProviderName = map[string]ProviderName{
+var providerNameMarshalMap map[ProviderName]string = map[ProviderName]string{
+	ProviderNameDemo:        string(ProviderNameDemo),
+	ProviderNameOllamaCloud: string(ProviderNameOllamaCloud),
+	ProviderNameOllama:      string(ProviderNameOllama),
+}
+
+var providerNameUnmarshalMap map[string]ProviderName = map[string]ProviderName{
 	string(ProviderNameDemo):        ProviderNameDemo,
 	string(ProviderNameOllamaCloud): ProviderNameOllamaCloud,
 	string(ProviderNameOllama):      ProviderNameOllama,
 }
 
-func (n *ProviderName) Value() string {
-	for value, name := range knownProviderNames {
-		if *n == name {
-			return value
-		}
-	}
-	slog.Warn("unexpected provider name", slog.Any("n", *n))
-	return ""
+func (n ProviderName) MarshalText() ([]byte, error) {
+	return config.MarshalEnum(n, providerNameMarshalMap)
 }
 
-func (n *ProviderName) MarshalTOML() ([]byte, error) {
-	return []byte(`"` + n.Value() + `"`), nil
-}
-
-func (n *ProviderName) UnmarshalTOML(value any) error {
-	nameString, ok := value.(string)
-	if !ok {
-		return fmt.Errorf("unexpected provider name type %v", value)
-	}
-	name, ok := knownProviderNames[nameString]
-	if !ok {
-		return fmt.Errorf("unknown provider name: '%s'", nameString)
+func (n *ProviderName) UnmarshalText(text []byte) error {
+	name, err := config.UnmarshalEnum(providerNameUnmarshalMap, text)
+	if err != nil {
+		return err
 	}
 	*n = name
 	return nil

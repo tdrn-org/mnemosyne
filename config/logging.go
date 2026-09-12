@@ -17,9 +17,9 @@
 package config
 
 import (
-	"fmt"
 	"log/slog"
 
+	"github.com/tdrn-org/go-config-toml"
 	"github.com/tdrn-org/go-log"
 )
 
@@ -37,43 +37,52 @@ type LoggingConfig struct {
 
 type LogLevel slog.Level
 
-var knownLogLevels map[string]LogLevel = map[string]LogLevel{
+var logLevelMarshalMap map[LogLevel]string = map[LogLevel]string{
+	LogLevel(slog.LevelDebug): "debug",
+	LogLevel(slog.LevelInfo):  "info",
+	LogLevel(slog.LevelWarn):  "warn",
+	LogLevel(slog.LevelError): "error",
+}
+
+var logLevelUnmarshalMap map[string]LogLevel = map[string]LogLevel{
 	"debug": LogLevel(slog.LevelDebug),
 	"info":  LogLevel(slog.LevelInfo),
 	"warn":  LogLevel(slog.LevelWarn),
 	"error": LogLevel(slog.LevelError),
 }
 
-func (l *LogLevel) Value() string {
-	for value, level := range knownLogLevels {
-		if *l == level {
-			return value
-		}
-	}
-	slog.Warn("unexpected log level", slog.Any("l", *l))
-	return ""
+func (l LogLevel) String() string {
+	return logLevelMarshalMap[l]
 }
 
-func (l *LogLevel) MarshalTOML() ([]byte, error) {
-	return []byte(`"` + l.Value() + `"`), nil
+func (l LogLevel) MarshalText() ([]byte, error) {
+	return config.MarshalEnum(l, logLevelMarshalMap)
 }
 
-func (l *LogLevel) UnmarshalTOML(value any) error {
-	levelString, ok := value.(string)
-	if !ok {
-		return fmt.Errorf("unexpected log level type %v", value)
+func (l *LogLevel) UnmarshalText(text []byte) error {
+	logLevel, err := config.UnmarshalEnum(logLevelUnmarshalMap, text)
+	if err != nil {
+		return err
 	}
-	level, ok := knownLogLevels[levelString]
-	if !ok {
-		return fmt.Errorf("unknown log level: '%s'", levelString)
-	}
-	*l = level
+	*l = logLevel
 	return nil
 }
 
 type LogTarget log.Target
 
-var knownLogTargets map[string]LogTarget = map[string]LogTarget{
+var logTargetMarshalMap map[LogTarget]string = map[LogTarget]string{
+	LogTarget(log.TargetStdout):     string(log.TargetStdout),
+	LogTarget(log.TargetStdoutText): string(log.TargetStdoutText),
+	LogTarget(log.TargetStdoutJSON): string(log.TargetStdoutJSON),
+	LogTarget(log.TargetStderr):     string(log.TargetStderr),
+	LogTarget(log.TargetStderrText): string(log.TargetStderrText),
+	LogTarget(log.TargetStderrJSON): string(log.TargetStderrJSON),
+	LogTarget(log.TargetFileText):   string(log.TargetFileText),
+	LogTarget(log.TargetFileJSON):   string(log.TargetFileJSON),
+	LogTarget(log.TargetSyslog):     string(log.TargetSyslog),
+}
+
+var logTargetUnmarshalMap map[string]LogTarget = map[string]LogTarget{
 	string(log.TargetStdout):     LogTarget(log.TargetStdout),
 	string(log.TargetStdoutText): LogTarget(log.TargetStdoutText),
 	string(log.TargetStdoutJSON): LogTarget(log.TargetStdoutJSON),
@@ -85,64 +94,50 @@ var knownLogTargets map[string]LogTarget = map[string]LogTarget{
 	string(log.TargetSyslog):     LogTarget(log.TargetSyslog),
 }
 
-func (t *LogTarget) Value() string {
-	for value, target := range knownLogTargets {
-		if *t == target {
-			return value
-		}
-	}
-	slog.Warn("unexpected log target", slog.Any("t", *t))
-	return ""
+func (t LogTarget) String() string {
+	return logTargetMarshalMap[t]
 }
 
-func (t *LogTarget) MarshalTOML() ([]byte, error) {
-	return []byte(`"` + t.Value() + `"`), nil
+func (t LogTarget) MarshalText() ([]byte, error) {
+	return config.MarshalEnum(t, logTargetMarshalMap)
 }
 
-func (t *LogTarget) UnmarshalTOML(value any) error {
-	targetString, ok := value.(string)
-	if !ok {
-		return fmt.Errorf("unexpected log target type %v", value)
+func (t *LogTarget) UnmarshalText(text []byte) error {
+	logTarget, err := config.UnmarshalEnum(logTargetUnmarshalMap, text)
+	if err != nil {
+		return err
 	}
-	target, ok := knownLogTargets[targetString]
-	if !ok {
-		return fmt.Errorf("unknown log target: '%s'", targetString)
-	}
-	*t = target
+	*t = logTarget
 	return nil
 }
 
 type LogColor log.Color
 
-var knownLogColors map[string]LogColor = map[string]LogColor{
+var logColorMarshalMap map[LogColor]string = map[LogColor]string{
+	LogColor(log.ColorAuto): "auto",
+	LogColor(log.ColorOff):  "off",
+	LogColor(log.ColorOn):   "on",
+}
+
+var logColorUnmarshalMap map[string]LogColor = map[string]LogColor{
 	"auto": LogColor(log.ColorAuto),
 	"off":  LogColor(log.ColorOff),
 	"on":   LogColor(log.ColorOn),
 }
 
-func (c *LogColor) Value() string {
-	for value, color := range knownLogColors {
-		if *c == color {
-			return value
-		}
-	}
-	slog.Warn("unexpected log color", slog.Any("c", *c))
-	return ""
+func (c LogColor) String() string {
+	return logColorMarshalMap[c]
 }
 
-func (c *LogColor) MarshalTOML() ([]byte, error) {
-	return []byte(`"` + c.Value() + `"`), nil
+func (c LogColor) MarshalText() ([]byte, error) {
+	return config.MarshalEnum(c, logColorMarshalMap)
 }
 
-func (c *LogColor) UnmarshalTOML(value any) error {
-	colorString, ok := value.(string)
-	if !ok {
-		return fmt.Errorf("unexpected log color type %v", value)
+func (c *LogColor) UnmarshalText(text []byte) error {
+	logColor, err := config.UnmarshalEnum(logColorUnmarshalMap, text)
+	if err != nil {
+		return err
 	}
-	color, ok := knownLogColors[colorString]
-	if !ok {
-		return fmt.Errorf("unknown log color: '%s'", colorString)
-	}
-	*c = color
+	*c = logColor
 	return nil
 }

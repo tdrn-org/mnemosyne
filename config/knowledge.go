@@ -17,8 +17,8 @@
 package config
 
 import (
-	"fmt"
-	"log/slog"
+	"github.com/tdrn-org/go-config-toml"
+	"github.com/tdrn-org/go-jobticker"
 )
 
 type KnowledgeConfig struct {
@@ -35,39 +35,30 @@ const (
 type MarkdownSourceConfig struct {
 	Store string `toml:"store"`
 	PathFilter
-	Nature              MarkdownNature `toml:"nature"`
-	Schedule            ScheduleSpec   `toml:"schedule"`
-	ChunkTokenLimit     int            `toml:"chunk_token_limit"`
-	ChunkRenderTemplate string         `toml:"chunk_render_template"`
+	Nature              MarkdownNature         `toml:"nature"`
+	Schedule            jobticker.ScheduleSpec `toml:"schedule"`
+	ChunkTokenLimit     int                    `toml:"chunk_token_limit"`
+	ChunkRenderTemplate string                 `toml:"chunk_render_template"`
 }
 
-var knownMarkdownNatures map[string]MarkdownNature = map[string]MarkdownNature{
+var markdownNatureMarshalMap map[MarkdownNature]string = map[MarkdownNature]string{
+	MarkdownNatureGeneric:  string(MarkdownNatureGeneric),
+	MarkdownNatureObsidian: string(MarkdownNatureObsidian),
+}
+
+var markdownNatureUnmarshalMap map[string]MarkdownNature = map[string]MarkdownNature{
 	string(MarkdownNatureGeneric):  MarkdownNatureGeneric,
 	string(MarkdownNatureObsidian): MarkdownNatureObsidian,
 }
 
-func (n *MarkdownNature) Value() string {
-	for value, nature := range knownMarkdownNatures {
-		if *n == nature {
-			return value
-		}
-	}
-	slog.Warn("unexpected Markdown nature", slog.Any("n", *n))
-	return ""
+func (n MarkdownNature) MarshalText() ([]byte, error) {
+	return config.MarshalEnum(n, markdownNatureMarshalMap)
 }
 
-func (n *MarkdownNature) MarshalTOML() ([]byte, error) {
-	return []byte(`"` + n.Value() + `"`), nil
-}
-
-func (n *MarkdownNature) UnmarshalTOML(value any) error {
-	natureString, ok := value.(string)
-	if !ok {
-		return fmt.Errorf("unexpected Markdown nature type %v", value)
-	}
-	nature, ok := knownMarkdownNatures[natureString]
-	if !ok {
-		return fmt.Errorf("unknown Markdown nature: '%s'", natureString)
+func (n *MarkdownNature) UnmarshalText(text []byte) error {
+	nature, err := config.UnmarshalEnum(markdownNatureUnmarshalMap, text)
+	if err != nil {
+		return err
 	}
 	*n = nature
 	return nil

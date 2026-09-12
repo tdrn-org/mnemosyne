@@ -17,21 +17,20 @@
 package config
 
 import (
-	"fmt"
-	"log/slog"
+	"github.com/tdrn-org/go-config-toml"
 )
 
 type ServerConfig struct {
-	Address            string         `toml:"address"`
-	Protocol           ServerProtocol `toml:"protocol"`
-	CertFile           string         `toml:"cert_file"`
-	KeyFile            string         `toml:"key_file"`
-	PublicURL          URLSpec        `toml:"public_url"`
-	TrustedProxies     NetworkSpecs   `toml:"trusted_proxies"`
-	TrustedHeaders     []string       `toml:"trusted_headers"`
-	AllowedOrigins     []string       `toml:"allowed_origins"`
-	AccessLog          string         `toml:"access_log"`
-	AccessLogSizeLimit int64          `toml:"access_log_size_limit"`
+	Address            string              `toml:"address"`
+	Protocol           ServerProtocol      `toml:"protocol"`
+	CertFile           string              `toml:"cert_file"`
+	KeyFile            string              `toml:"key_file"`
+	PublicURL          config.URLSpec      `toml:"public_url"`
+	TrustedProxies     config.NetworkSpecs `toml:"trusted_proxies"`
+	TrustedHeaders     []string            `toml:"trusted_headers"`
+	AllowedOrigins     []string            `toml:"allowed_origins"`
+	AccessLog          string              `toml:"access_log"`
+	AccessLogSizeLimit int64               `toml:"access_log_size_limit"`
 }
 
 type ServerProtocol string
@@ -41,33 +40,24 @@ const (
 	ServerProtocolHttps ServerProtocol = "https"
 )
 
-var knownServerProtocols map[string]ServerProtocol = map[string]ServerProtocol{
+var serverProtocolMarshalMap map[ServerProtocol]string = map[ServerProtocol]string{
+	ServerProtocolHttp:  string(ServerProtocolHttp),
+	ServerProtocolHttps: string(ServerProtocolHttps),
+}
+
+var serverProtocolUnmarshalMap map[string]ServerProtocol = map[string]ServerProtocol{
 	string(ServerProtocolHttp):  ServerProtocolHttp,
 	string(ServerProtocolHttps): ServerProtocolHttps,
 }
 
-func (p *ServerProtocol) Value() string {
-	for value, protocol := range knownServerProtocols {
-		if *p == protocol {
-			return value
-		}
-	}
-	slog.Warn("unexpected server protocol", slog.Any("p", *p))
-	return ""
+func (p ServerProtocol) MarshalText() ([]byte, error) {
+	return config.MarshalEnum(p, serverProtocolMarshalMap)
 }
 
-func (p *ServerProtocol) MarshalTOML() ([]byte, error) {
-	return []byte(`"` + p.Value() + `"`), nil
-}
-
-func (p *ServerProtocol) UnmarshalTOML(value any) error {
-	protocolString, ok := value.(string)
-	if !ok {
-		return fmt.Errorf("unexpected server protocol type %v", value)
-	}
-	protocol, ok := knownServerProtocols[protocolString]
-	if !ok {
-		return fmt.Errorf("unknown log target: '%s'", protocolString)
+func (p *ServerProtocol) UnmarshalText(text []byte) error {
+	protocol, err := config.UnmarshalEnum(serverProtocolUnmarshalMap, text)
+	if err != nil {
+		return err
 	}
 	*p = protocol
 	return nil

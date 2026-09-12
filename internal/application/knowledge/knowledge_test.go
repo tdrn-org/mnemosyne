@@ -20,7 +20,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorhill/cronexpr"
 	"github.com/stretchr/testify/require"
 	"github.com/tdrn-org/mnemosyne/config"
 	"github.com/tdrn-org/mnemosyne/internal/application/knowledge"
@@ -39,10 +38,8 @@ func TestKnowledgeSync(t *testing.T) {
 				PathFilter: config.PathFilter{
 					Path: "testdata/",
 				},
-				Nature: config.MarkdownNatureObsidian,
-				Schedule: config.ScheduleSpec{
-					Expression: cronexpr.MustParse("0 * * * *"),
-				},
+				Nature:   config.MarkdownNatureObsidian,
+				Schedule: "0 * * * *",
 			},
 		},
 	}

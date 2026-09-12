@@ -29,7 +29,7 @@ import (
 
 func applyLoggingConfig(cfg *config.LoggingConfig) {
 	logConfig := &log.Config{
-		Level:          cfg.Level.Value(),
+		Level:          cfg.Level.String(),
 		AddSource:      false,
 		Target:         log.Target(cfg.Target),
 		Color:          log.Color(cfg.Color),

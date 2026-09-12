@@ -132,8 +132,7 @@ func (k *Knowledge) limitDocument(document string, limit *int) string {
 func (k *Knowledge) Sync(ctx context.Context, last, now time.Time) error {
 	k.logger.Info("syncing sources...")
 	for _, markdownSync := range k.markdownSyncs {
-		next := markdownSync.Cfg.Schedule.Next(last)
-		if next.Before(now) {
+		if markdownSync.Cfg.Schedule.InInterval(last, now) {
 			markdownSync.RunSync(ctx)
 		}
 	}

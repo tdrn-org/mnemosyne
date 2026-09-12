@@ -16,6 +16,8 @@
 
 package config
 
+import "github.com/tdrn-org/go-config-toml"
+
 // MemoryConfig holds the configuration for the memory store.
 type MemoryConfig struct {
 	// Types defines the known memory types and their default TTLs.
@@ -25,7 +27,7 @@ type MemoryConfig struct {
 
 // MemoryTypeConfig defines a known memory type with its default expiry.
 type MemoryTypeConfig struct {
-	Name        string       `toml:"name"`
-	TTL         DurationSpec `toml:"ttl"`
-	Description string       `toml:"description"`
+	Name        string              `toml:"name"`
+	TTL         config.DurationSpec `toml:"ttl"`
+	Description string              `toml:"description"`
 }

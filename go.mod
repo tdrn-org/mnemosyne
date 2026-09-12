@@ -3,16 +3,15 @@ module github.com/tdrn-org/mnemosyne
 go 1.27
 
 require (
-	github.com/BurntSushi/toml v1.6.0
 	github.com/alecthomas/kong v1.16.1
 	github.com/google/uuid v1.6.0
-	github.com/gorhill/cronexpr v0.0.0-20180427100037-88b0669f7d75
 	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/ollama/ollama v0.34.0
 	github.com/qdrant/go-client v1.19.2
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.12.1
 	github.com/tdrn-org/go-conf v0.0.8
+	github.com/tdrn-org/go-config-toml v0.1.0
 	github.com/tdrn-org/go-diff v0.1.4
 	github.com/tdrn-org/go-httpserver v0.1.3
 	github.com/tdrn-org/go-jobticker v0.0.1
@@ -31,6 +30,7 @@ require (
 	github.com/google/jsonschema-go v0.4.3 // indirect
 	github.com/mailru/easyjson v0.9.2 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
+	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/segmentio/encoding v0.5.4 // indirect
 	github.com/tdrn-org/go-tlsconf v0.0.12 // indirect
