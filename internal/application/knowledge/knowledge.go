@@ -129,16 +129,15 @@ func (k *Knowledge) limitDocument(document string, limit *int) string {
 	return document
 }
 
-func (k *Knowledge) Sync(ctx context.Context, frequency time.Duration) {
+func (k *Knowledge) Sync(ctx context.Context, last, now time.Time) error {
 	k.logger.Info("syncing sources...")
-	now := time.Now()
-	last := now.Add(-frequency)
 	for _, markdownSync := range k.markdownSyncs {
 		next := markdownSync.Cfg.Schedule.Next(last)
 		if next.Before(now) {
 			markdownSync.RunSync(ctx)
 		}
 	}
+	return nil
 }
 
 type markdownSync struct {

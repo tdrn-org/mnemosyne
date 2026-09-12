@@ -47,7 +47,8 @@ func TestKnowledgeSync(t *testing.T) {
 		},
 	}
 	knowledge := knowledge.NewKnowledge(cfg, store, tokenizer, embedder)
-	knowledge.Sync(t.Context(), time.Hour)
+	now := time.Now()
+	knowledge.Sync(t.Context(), now.Add(-time.Hour), now)
 }
 
 func testStore(t *testing.T) (*vectordb.Store, provider.Embedder) {

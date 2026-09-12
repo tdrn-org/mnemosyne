@@ -23,10 +23,10 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"sync"
 	"time"
 
 	"github.com/tdrn-org/go-httpserver"
+	"github.com/tdrn-org/go-jobticker"
 	"github.com/tdrn-org/mnemosyne/config"
 	"github.com/tdrn-org/mnemosyne/internal/adapters/middleware/mcp"
 	"github.com/tdrn-org/mnemosyne/internal/application/knowledge"
@@ -40,18 +40,15 @@ import (
 const serverJobTickerSchedule time.Duration = 5 * time.Minute
 
 type Server struct {
-	cfg                 *config.Config
-	httpServer          *httpserver.Instance
-	baseURL             *url.URL
-	vectorDB            *vectordb.Store
-	embedder            provider.Embedder
-	knowledge           *knowledge.Knowledge
-	memory              *memory.Memory
-	jobTicker           *time.Ticker
-	jobTickerShutdown   chan any
-	jobTickerShutdownWG sync.WaitGroup
-	jobs                []jobFunc
-	logger              *slog.Logger
+	cfg        *config.Config
+	httpServer *httpserver.Instance
+	baseURL    *url.URL
+	vectorDB   *vectordb.Store
+	embedder   provider.Embedder
+	knowledge  *knowledge.Knowledge
+	memory     *memory.Memory
+	jobTicker  *jobticker.SequentialQueue
+	logger     *slog.Logger
 }
 
 func StartServer(ctx context.Context, cfg *config.Config) (*Server, error) {
@@ -202,43 +199,20 @@ func (s *Server) startMCPHandler(_ context.Context, _ *config.Config) error {
 	return nil
 }
 
-func (s *Server) startJobTicker(_ context.Context, cfg *config.Config) error {
+func (s *Server) startJobTicker(ctx context.Context, cfg *config.Config) error {
 	schedule := serverJobTickerSchedule
-	s.logger.Info("starting job ticker...", slog.String("schedule", schedule.String()))
-	s.jobs = []jobFunc{
+	deadline := 4 * schedule
+	jobs := []jobticker.JobFunc{
 		s.knowledge.Sync,
 		s.memory.Sync,
 	}
-	s.jobTicker = time.NewTicker(schedule)
-	s.jobTickerShutdown = make(chan any)
-	s.jobTickerShutdownWG.Go(func() {
-		for stopped := false; !stopped; {
-			select {
-			case <-s.jobTickerShutdown:
-				stopped = true
-			case <-s.jobTicker.C:
-				s.runJobs(schedule)
-			}
-		}
-		s.logger.Info("job ticker stopped")
-	})
+	s.jobTicker = jobticker.StartSequential(ctx, schedule, deadline, jobs...)
 	return nil
 }
 
-func (s *Server) shutdownJobTicker(_ context.Context) error {
-	s.logger.Info("shutting down job ticker...")
-	s.jobTicker.Stop()
-	s.jobTickerShutdown <- true
-	s.jobTickerShutdownWG.Wait()
-	return nil
-}
-
-func (s *Server) runJobs(frequency time.Duration) {
-	s.logger.Info("running jobs...")
-	ctx := context.Background()
-	for _, job := range s.jobs {
-		job(ctx, frequency)
+func (s *Server) shutdownJobTicker(ctx context.Context) error {
+	if s.jobTicker == nil {
+		return nil
 	}
+	return s.jobTicker.Shutdown(ctx)
 }
-
-type jobFunc func(ctx context.Context, frequency time.Duration)
