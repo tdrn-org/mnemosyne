@@ -86,7 +86,7 @@ func registerKnowledgeTools(server *mcp.Server, runtime Runtime) {
 			"type": "object",
 			"properties": map[string]any{
 				"store": map[string]any{"type": "string", "description": "The store name containing the document."},
-				"path":  map[string]any{"type": "string", "description": "The relative path of the document within the store (e.g. '10_Holger/Ueber Holger.md')."},
+				"path":  map[string]any{"type": "string", "description": "The relative path of the document within the store (e.g. 'notes/about.md')."},
 				"limit": map[string]any{"type": "number", "description": "Optional rune limit for the returned content. When exceeded, the document is truncated with '...' appended."},
 			},
 			"required": []string{"store", "path"},
