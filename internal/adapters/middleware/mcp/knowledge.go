@@ -19,8 +19,10 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/tdrn-org/mnemosyne/internal/domain"
 )
 
 func registerKnowledgeTools(server *mcp.Server, runtime Runtime) {
@@ -65,7 +67,7 @@ func registerKnowledgeTools(server *mcp.Server, runtime Runtime) {
 		if err != nil {
 			return nil, nil, fmt.Errorf("searching store: %w", err)
 		}
-		text := fmt.Sprintf("Found %d chunk(s)", len(chunks))
+		text := formatChunksText(chunks)
 		result := &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: text}},
 		}
@@ -103,9 +105,31 @@ func registerKnowledgeTools(server *mcp.Server, runtime Runtime) {
 				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("Document '%s' not found in store '%s'", input.Path, input.Store)}},
 			}, nil, nil
 		}
-		text := fmt.Sprintf("Read document '%s' from store '%s' (%d runes)", input.Path, input.Store, len([]rune(document)))
+		text := fmt.Sprintf("--- %s/%s ---\n%s", input.Store, input.Path, document)
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: text}},
 		}, map[string]any{"document": document}, nil
 	})
+}
+
+// formatChunksText renders matched knowledge chunks as human-readable text so that MCP
+// clients without structured-content support can still read the actual chunk content.
+func formatChunksText(chunks []domain.Chunk) string {
+	if len(chunks) == 0 {
+		return "No chunks found"
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "Found %d chunk(s):\n", len(chunks))
+	for _, ch := range chunks {
+		fmt.Fprintf(&b, "--- [%s] %s\n", ch.Store, ch.Path)
+		if heading := strings.Join(ch.HeadingPath, " > "); heading != "" {
+			fmt.Fprintf(&b, "# %s\n", heading)
+		}
+		if len(ch.Tags) > 0 {
+			fmt.Fprintf(&b, "tags: %s\n", strings.Join(ch.Tags, ", "))
+		}
+		b.WriteString(ch.Content)
+		b.WriteByte('\n')
+	}
+	return strings.TrimRight(b.String(), "\n")
 }

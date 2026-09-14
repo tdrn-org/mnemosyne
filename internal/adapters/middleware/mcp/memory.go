@@ -19,6 +19,7 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -39,7 +40,7 @@ func registerMemoryTools(server *mcp.Server, runtime Runtime) {
 		if err != nil {
 			return nil, nil, fmt.Errorf("listing memory types: %w", err)
 		}
-		text := fmt.Sprintf("Found %d memory type(s)", len(types))
+		text := formatMemoryTypesText(types)
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: text}},
 		}, map[string]any{"memory_types": types}, nil
@@ -118,7 +119,7 @@ func registerMemoryTools(server *mcp.Server, runtime Runtime) {
 		if err != nil {
 			return nil, nil, fmt.Errorf("recalling memories: %w", err)
 		}
-		text := fmt.Sprintf("Found %d memory/memories", len(memories))
+		text := formatMemoriesText(memories)
 		result := &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: text}},
 		}
@@ -178,4 +179,46 @@ func registerMemoryTools(server *mcp.Server, runtime Runtime) {
 			Content: []mcp.Content{&mcp.TextContent{Text: text}},
 		}, map[string]any{"id": input.ID, "trust_delta": input.TrustDelta}, nil
 	})
+}
+
+// formatMemoryTypesText renders the configured memory types as human-readable text so
+// that MCP clients without structured-content support can still see the full result.
+func formatMemoryTypesText(types []domain.MemoryType) string {
+	if len(types) == 0 {
+		return "No memory types configured"
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "Found %d memory type(s):\n", len(types))
+	for _, typ := range types {
+		ttl := typ.TTL.String()
+		if typ.TTL == 0 {
+			ttl = "never expires"
+		}
+		fmt.Fprintf(&b, "- %s (TTL %s)", typ.Name, ttl)
+		if typ.Description != "" {
+			fmt.Fprintf(&b, " — %s", typ.Description)
+		}
+		b.WriteByte('\n')
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+// formatMemoriesText renders recalled memories as human-readable text so that MCP
+// clients without structured-content support can still read the actual memory content.
+func formatMemoriesText(memories []domain.Memory) string {
+	if len(memories) == 0 {
+		return "No memories found"
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "Found %d matching memories:\n", len(memories))
+	for _, m := range memories {
+		fmt.Fprintf(&b, "--- %s\n", m.ID)
+		fmt.Fprintf(&b, "type: %s · trust: %.2f · created: %s\n", m.Type, m.Trust, m.CreatedAt.Format(time.RFC3339))
+		if len(m.Labels) > 0 {
+			fmt.Fprintf(&b, "labels: %s\n", strings.Join(m.Labels, ", "))
+		}
+		b.WriteString(m.Content)
+		b.WriteByte('\n')
+	}
+	return strings.TrimRight(b.String(), "\n")
 }
