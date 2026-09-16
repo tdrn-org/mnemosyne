@@ -5,7 +5,7 @@ go 1.27
 require (
 	github.com/alecthomas/kong v1.16.1
 	github.com/google/uuid v1.6.0
-	github.com/modelcontextprotocol/go-sdk v1.7.0
+	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/ollama/ollama v0.34.0
 	github.com/qdrant/go-client v1.19.2
 	github.com/rs/cors v1.11.1
