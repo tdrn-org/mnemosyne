@@ -15,7 +15,7 @@ require (
 	github.com/tdrn-org/go-diff v0.1.4
 	github.com/tdrn-org/go-httpserver v0.1.3
 	github.com/tdrn-org/go-jobticker v0.0.1
-	github.com/tdrn-org/go-log v0.6.1
+	github.com/tdrn-org/go-log v0.6.2
 	github.com/yuin/goldmark v1.8.6
 	google.golang.org/protobuf v1.36.12
 )
