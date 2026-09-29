@@ -61,8 +61,8 @@ github.com/tdrn-org/go-config-toml v0.1.0 h1:sJM/BaTusxVazsZhiKn5WiRw8pE94dIgDPD
 github.com/tdrn-org/go-config-toml v0.1.0/go.mod h1:4gmdmSNkABSl7RxnV9aD3rf1GitdxdqwmIuxeNFW3FA=
 github.com/tdrn-org/go-diff v0.1.4 h1:BmUep7q5W09KV51PbjGBOq4e2NE9qU5F5UPqf/2W9uI=
 github.com/tdrn-org/go-diff v0.1.4/go.mod h1:apUNQ6p1tC2OPkcKZ1dGe7Ey3StQKoxtfK0zvmVRbmU=
-github.com/tdrn-org/go-httpserver v0.1.3 h1:uYSKP3HaxIdJfxJSr+0k2AphPH8PaLhYYfCxG5l/xew=
-github.com/tdrn-org/go-httpserver v0.1.3/go.mod h1:8HkaJfNPY1ThFcFSrylZJSs2dcD4pku6gQdWWrSMEus=
+github.com/tdrn-org/go-httpserver v0.1.4 h1:flWPuZ2pMX6pAxq9pICvkgiM0bpvipniy7fOMYMr5vE=
+github.com/tdrn-org/go-httpserver v0.1.4/go.mod h1:iuleOElQuI6kqJywg9NvLYo2U4KhMTrrg8S/x6z8IP0=
 github.com/tdrn-org/go-jobticker v0.0.1 h1:ExRuEexod4U4lDXKU+ST3DxziwasoSy12EWccaG7jnE=
 github.com/tdrn-org/go-jobticker v0.0.1/go.mod h1:GLYbpDHE5bKb3dZWDlh/Mjxh4f8/Ez5QHlcych/7bUE=
 github.com/tdrn-org/go-log v0.6.1 h1:suJYTYrvlOSwKNhKtx0YOsW/5u58qvZr56owbN3sA2k=
