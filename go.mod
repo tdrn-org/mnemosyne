@@ -1,6 +1,6 @@
 module github.com/tdrn-org/mnemosyne
 
-go 1.27
+go 1.27.0
 
 require (
 	github.com/alecthomas/kong v1.16.1
@@ -13,7 +13,7 @@ require (
 	github.com/tdrn-org/go-conf v0.0.8
 	github.com/tdrn-org/go-config-toml v0.1.0
 	github.com/tdrn-org/go-diff v0.1.4
-	github.com/tdrn-org/go-httpserver v0.1.3
+	github.com/tdrn-org/go-httpserver v0.1.4
 	github.com/tdrn-org/go-jobticker v0.0.1
 	github.com/tdrn-org/go-log v0.6.2
 	github.com/yuin/goldmark v1.8.6
