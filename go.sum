@@ -39,8 +39,8 @@ github.com/mattn/go-isatty v0.0.24 h1:tGZZoVgT/KiqK1c8ocVLeDS8BSWMRd47J3Lbz7vsRe
 github.com/mattn/go-isatty v0.0.24/go.mod h1:nMCL3Zebbrt45jsMDgnfIwz6ydEQApk5oEI3HqDio6A=
 github.com/modelcontextprotocol/go-sdk v1.8.0 h1:KIvahhYqwtbeniWVPs3TcXEA7b8jEtwfBpOTAI+Urx4=
 github.com/modelcontextprotocol/go-sdk v1.8.0/go.mod h1:dL7u98E/zjJTGzEq+j30jQ8K2k1mb6LeAH4inEcSGts=
-github.com/ollama/ollama v0.34.2 h1:wGe+XyrdEQbZDhnSQ+f+j/uXoOQpetDuRj4tTvdIg7s=
-github.com/ollama/ollama v0.34.2/go.mod h1:6dxickvQom7AD4B7WNKh3Q5upVifPrF2EJd4vaNkZg8=
+github.com/ollama/ollama v0.34.4 h1:o7So45nFInmKbWj8O8I5NWuoeRYxoupkLA0hnQ+N60s=
+github.com/ollama/ollama v0.34.4/go.mod h1:6dxickvQom7AD4B7WNKh3Q5upVifPrF2EJd4vaNkZg8=
 github.com/pelletier/go-toml/v2 v2.4.3 h1:GTRvJQutkOSftxIFD5xw9aepkYNuPWmVJpffdDPYVpY=
 github.com/pelletier/go-toml/v2 v2.4.3/go.mod h1:2gIqNv+qfxSVS7cM2xJQKtLSTLUE9V8t9Stt+h56mCY=
 github.com/qdrant/go-client v1.19.2 h1:R4w8PG8cdtTzaviU/76JuCc0pI/tzbUE27B8UVqSf74=
