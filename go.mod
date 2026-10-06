@@ -6,7 +6,7 @@ require (
 	github.com/alecthomas/kong v1.16.1
 	github.com/google/uuid v1.6.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
-	github.com/ollama/ollama v0.34.4
+	github.com/ollama/ollama v0.35.1
 	github.com/qdrant/go-client v1.19.3
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.12.1
