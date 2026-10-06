@@ -57,8 +57,8 @@ github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWD
 github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
 github.com/tdrn-org/go-conf v0.0.8 h1:4zHHacpYDAqShfxdgWv9QiCnPRCsyWKSjx+GEAe0+Mw=
 github.com/tdrn-org/go-conf v0.0.8/go.mod h1:yiCoV6Icp3aReaNPa4Ok/FVNvhtYDt9AO+vPSv1OnQg=
-github.com/tdrn-org/go-config-toml v0.1.0 h1:sJM/BaTusxVazsZhiKn5WiRw8pE94dIgDPDZYrjODXI=
-github.com/tdrn-org/go-config-toml v0.1.0/go.mod h1:4gmdmSNkABSl7RxnV9aD3rf1GitdxdqwmIuxeNFW3FA=
+github.com/tdrn-org/go-config-toml v0.1.1 h1:LHiHB9rEEgxn4D2Tscs9+e7tHF7oAn0M3Y+SjJlqKXA=
+github.com/tdrn-org/go-config-toml v0.1.1/go.mod h1:H6dx3LJvaLWuuej7XunaVEXLBrK8Yca3xmiQvp2KgLs=
 github.com/tdrn-org/go-diff v0.1.4 h1:BmUep7q5W09KV51PbjGBOq4e2NE9qU5F5UPqf/2W9uI=
 github.com/tdrn-org/go-diff v0.1.4/go.mod h1:apUNQ6p1tC2OPkcKZ1dGe7Ey3StQKoxtfK0zvmVRbmU=
 github.com/tdrn-org/go-httpserver v0.1.4 h1:flWPuZ2pMX6pAxq9pICvkgiM0bpvipniy7fOMYMr5vE=
