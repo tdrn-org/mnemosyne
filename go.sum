@@ -55,8 +55,8 @@ github.com/segmentio/encoding v0.5.4 h1:OW1VRern8Nw6ITAtwSZ7Idrl3MXCFwXHPgqESYfv
 github.com/segmentio/encoding v0.5.4/go.mod h1:HS1ZKa3kSN32ZHVZ7ZLPLXWvOVIiZtyJnO1gPH1sKt0=
 github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=
 github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
-github.com/tdrn-org/go-conf v0.0.8 h1:4zHHacpYDAqShfxdgWv9QiCnPRCsyWKSjx+GEAe0+Mw=
-github.com/tdrn-org/go-conf v0.0.8/go.mod h1:yiCoV6Icp3aReaNPa4Ok/FVNvhtYDt9AO+vPSv1OnQg=
+github.com/tdrn-org/go-conf v0.0.10 h1:wWM8MvpTYcJQJGX90N0c+tTYOawFbmbRDJwtd8zgN6c=
+github.com/tdrn-org/go-conf v0.0.10/go.mod h1:1uuv293cjQs3aCufg/JV2kwParmExbuvKY9NIDAEPL8=
 github.com/tdrn-org/go-config-toml v0.1.1 h1:LHiHB9rEEgxn4D2Tscs9+e7tHF7oAn0M3Y+SjJlqKXA=
 github.com/tdrn-org/go-config-toml v0.1.1/go.mod h1:H6dx3LJvaLWuuej7XunaVEXLBrK8Yca3xmiQvp2KgLs=
 github.com/tdrn-org/go-diff v0.1.4 h1:BmUep7q5W09KV51PbjGBOq4e2NE9qU5F5UPqf/2W9uI=
@@ -65,10 +65,10 @@ github.com/tdrn-org/go-httpserver v0.1.6 h1:rtCIaPGnYLswQmUd4WZIx+oK1BhsOCkQVllo
 github.com/tdrn-org/go-httpserver v0.1.6/go.mod h1:FMywF9Fu9S+4sW89vXxcgJzup8dZyNnoAO0m84f3AYI=
 github.com/tdrn-org/go-jobticker v0.0.2 h1:hW9ZtMAYEnd5QCtFI4yl714n36eubYepefGlvox4O3g=
 github.com/tdrn-org/go-jobticker v0.0.2/go.mod h1:cViffbF41X0uzuWGJo4hrpSjWuCYyCG+feXKy/8ENBs=
-github.com/tdrn-org/go-log v0.6.2 h1:rcFJCRj0mE//iaNPEht0qbJEBX25LLiOYIgvEsRwMGc=
-github.com/tdrn-org/go-log v0.6.2/go.mod h1:2vA57ZTOPYyg2vfstTTP+uWIBd2qdK2SBK/PTtQ+5wk=
-github.com/tdrn-org/go-tlsconf v0.0.12 h1:o2LayL47FtaNzM4QjgYnHnlAvOb373zOsUbA1QSR0os=
-github.com/tdrn-org/go-tlsconf v0.0.12/go.mod h1:mfzcHAGoJ46LFfhHTfk9plFph0OrRpQk3eHV2uO/vDY=
+github.com/tdrn-org/go-log v0.6.4 h1:AvpO/nizfq5O+wq6rJNocXG4HsIvsUAhgIG/MOg5LGI=
+github.com/tdrn-org/go-log v0.6.4/go.mod h1:BlnqMMnt1DwQjJZuxMy0qSffPttdv6ubcod6mgGBvzA=
+github.com/tdrn-org/go-tlsconf v0.0.15 h1:VscbpWYkvVY8fJf3ncGgFRRAmRQWTL1Uxr5JP9zRz2U=
+github.com/tdrn-org/go-tlsconf v0.0.15/go.mod h1:1iL49P7ov0OfD08T4rgL3BJ7Zw3UZRNK45PcWa26SgE=
 github.com/wk8/go-ordered-map/v2 v2.1.8 h1:5h/BUHu93oj4gIdvHHHGsScSTMijfx5PeYkE/fJgbpc=
 github.com/wk8/go-ordered-map/v2 v2.1.8/go.mod h1:5nJHM5DyteebpVlHnWMV0rPz6Zp7+xBAnxjb1X5vnTw=
 github.com/yosida95/uritemplate/v3 v3.0.2 h1:Ed3Oyj9yrmi9087+NczuL5BwkIc4wvTb5zIM+UJPGz4=

@@ -10,12 +10,12 @@ require (
 	github.com/qdrant/go-client v1.19.3
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.12.1
-	github.com/tdrn-org/go-conf v0.0.8
+	github.com/tdrn-org/go-conf v0.0.10
 	github.com/tdrn-org/go-config-toml v0.1.1
 	github.com/tdrn-org/go-diff v0.1.4
 	github.com/tdrn-org/go-httpserver v0.1.6
 	github.com/tdrn-org/go-jobticker v0.0.2
-	github.com/tdrn-org/go-log v0.6.2
+	github.com/tdrn-org/go-log v0.6.4
 	github.com/yuin/goldmark v1.8.6
 	google.golang.org/protobuf v1.36.12
 )
@@ -33,7 +33,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/segmentio/encoding v0.5.4 // indirect
-	github.com/tdrn-org/go-tlsconf v0.0.12 // indirect
+	github.com/tdrn-org/go-tlsconf v0.0.15 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
