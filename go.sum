@@ -55,8 +55,8 @@ github.com/segmentio/encoding v0.5.4 h1:OW1VRern8Nw6ITAtwSZ7Idrl3MXCFwXHPgqESYfv
 github.com/segmentio/encoding v0.5.4/go.mod h1:HS1ZKa3kSN32ZHVZ7ZLPLXWvOVIiZtyJnO1gPH1sKt0=
 github.com/stretchr/testify v1.12.1 h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=
 github.com/stretchr/testify v1.12.1/go.mod h1:MDEgiDPPsNp5cuIrHPPCyornHKgEVbtFUmoNlxoYthg=
-github.com/tdrn-org/go-conf v0.0.8 h1:4zHHacpYDAqShfxdgWv9QiCnPRCsyWKSjx+GEAe0+Mw=
-github.com/tdrn-org/go-conf v0.0.8/go.mod h1:yiCoV6Icp3aReaNPa4Ok/FVNvhtYDt9AO+vPSv1OnQg=
+github.com/tdrn-org/go-conf v0.0.10 h1:wWM8MvpTYcJQJGX90N0c+tTYOawFbmbRDJwtd8zgN6c=
+github.com/tdrn-org/go-conf v0.0.10/go.mod h1:1uuv293cjQs3aCufg/JV2kwParmExbuvKY9NIDAEPL8=
 github.com/tdrn-org/go-config-toml v0.1.1 h1:LHiHB9rEEgxn4D2Tscs9+e7tHF7oAn0M3Y+SjJlqKXA=
 github.com/tdrn-org/go-config-toml v0.1.1/go.mod h1:H6dx3LJvaLWuuej7XunaVEXLBrK8Yca3xmiQvp2KgLs=
 github.com/tdrn-org/go-diff v0.1.4 h1:BmUep7q5W09KV51PbjGBOq4e2NE9qU5F5UPqf/2W9uI=
