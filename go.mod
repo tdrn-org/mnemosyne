@@ -10,7 +10,7 @@ require (
 	github.com/qdrant/go-client v1.19.3
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.12.1
-	github.com/tdrn-org/go-conf v0.0.8
+	github.com/tdrn-org/go-conf v0.0.10
 	github.com/tdrn-org/go-config-toml v0.1.1
 	github.com/tdrn-org/go-diff v0.1.4
 	github.com/tdrn-org/go-httpserver v0.1.6
