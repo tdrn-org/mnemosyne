@@ -12,7 +12,7 @@ require (
 	github.com/stretchr/testify v1.12.1
 	github.com/tdrn-org/go-conf v0.0.10
 	github.com/tdrn-org/go-config-toml v0.1.1
-	github.com/tdrn-org/go-diff v0.1.4
+	github.com/tdrn-org/go-diff v0.1.6
 	github.com/tdrn-org/go-httpserver v0.1.6
 	github.com/tdrn-org/go-jobticker v0.0.2
 	github.com/tdrn-org/go-log v0.6.4
