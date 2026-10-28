@@ -6,7 +6,7 @@ require (
 	github.com/alecthomas/kong v1.16.1
 	github.com/google/uuid v1.6.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
-	github.com/ollama/ollama v0.40.6
+	github.com/ollama/ollama v0.40.11
 	github.com/qdrant/go-client v1.19.4
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.12.1
@@ -28,6 +28,7 @@ require (
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/jsonschema-go v0.4.3 // indirect
+	github.com/kr/text v0.2.0 // indirect
 	github.com/mailru/easyjson v0.9.2 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
