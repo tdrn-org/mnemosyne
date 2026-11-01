@@ -34,5 +34,28 @@ func TestParser(t *testing.T) {
 	require.NoError(t, err)
 	chunks, err := parser.Parse(markdownMDFile, source, 10)
 	require.NoError(t, err)
-	require.Len(t, chunks, 2)
+	// A token limit of 10 splits the document at every heading: the root section
+	// plus each heading section that carries text of its own. Sections holding
+	// only child sections produce no chunk.
+	require.Len(t, chunks, 10)
+	for _, chunk := range chunks {
+		require.NotEmpty(t, chunk.Content)
+	}
+}
+
+func TestParserChunksBySection(t *testing.T) {
+	// Regression: the parent token count used to stay at zero, so with a
+	// realistic token limit every document became exactly one chunk. That
+	// silently truncated the embedded text at the embedder's context limit and
+	// made the whole document compete as a single vector.
+	tokenizer := &tokenizer.EstimateTokenizer{RunesPerToken: 4}
+	parser := markdown.NewParser(t.Name(), tokenizer)
+	source, err := os.ReadFile(markdownMDFile)
+	require.NoError(t, err)
+	chunks, err := parser.Parse(markdownMDFile, source, 512)
+	require.NoError(t, err)
+	require.Greater(t, len(chunks), 1)
+	for _, chunk := range chunks {
+		require.NotEmpty(t, chunk.Content)
+	}
 }

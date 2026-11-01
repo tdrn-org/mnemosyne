@@ -59,6 +59,7 @@ func (p *Parser) Parse(path string, source []byte, tokenLimit int) ([]domain.Chu
 		source:        source,
 	}
 	decoder.Decode()
+	decoder.rootSection.computeTokenCount()
 	return decoder.Chunk(tokenLimit), nil
 }
 
@@ -163,7 +164,6 @@ func (d *chunkDecoder) newSection(heading *ast.Heading) {
 }
 
 func (s *decodedSection) addChild(child *decodedSection, level int) {
-	s.TokenCount += child.TokenCount
 	if len(child.HeadingPath) == level {
 		s.Children = append(s.Children, child)
 		return
@@ -181,6 +181,21 @@ func (s *decodedSection) addChild(child *decodedSection, level int) {
 	}
 	s.Children = append(s.Children, next)
 	next.addChild(child, level+1)
+}
+
+// computeTokenCount sums the token counts of a section and all its descendants.
+// It has to run once after decoding: a section is attached to its parent before
+// its blocks are collected, so an increment on attach would only ever add zero.
+func (s *decodedSection) computeTokenCount() int {
+	total := 0
+	for _, block := range s.Blocks {
+		total += block.TokenCount
+	}
+	for _, child := range s.Children {
+		total += child.computeTokenCount()
+	}
+	s.TokenCount = total
+	return total
 }
 
 func (d *chunkDecoder) Chunk(tokenLimit int) []domain.Chunk {
@@ -216,8 +231,13 @@ func (a *chunkAggregator) chunkHelper(section *decodedSection) {
 }
 
 func (a *chunkAggregator) addSectionFull(section *decodedSection) {
-	id := a.chunkID(section, 0)
 	content := a.renderFull(section)
+	if strings.TrimSpace(content) == "" {
+		// A heading without any text below it (for example the last line of a
+		// file) must not become an empty chunk.
+		return
+	}
+	id := a.chunkID(section, 0)
 	chunkHash := crypto.HashString(content)
 	a.chunks = append(a.chunks, domain.Chunk{
 		ID:            id,
@@ -257,8 +277,14 @@ func (a *chunkAggregator) renderFullHelper(buffer *strings.Builder, section *dec
 }
 
 func (a *chunkAggregator) addSectionShallow(section *decodedSection) {
-	id := a.chunkID(section, 0)
 	content := a.renderShallow(section)
+	if strings.TrimSpace(content) == "" {
+		// A section that only holds child sections has no content of its own.
+		// Emitting a chunk for it would store an empty embedding that can never
+		// match anything, so it is skipped and its children are chunked instead.
+		return
+	}
+	id := a.chunkID(section, 0)
 	chunkHash := crypto.HashString(content)
 	a.chunks = append(a.chunks, domain.Chunk{
 		ID:            id,
