@@ -34,7 +34,7 @@ func TestDocuments(t *testing.T) {
 		ID:       vectordb.DocumentID(path),
 		Path:     path,
 		Hash:     "1234567890",
-		LastSync: vectordb.Timestamp(time.Now()),
+		LastSync: domain.Timestamp(time.Now()),
 	}
 
 	d1, err := vectorDB.LookupDocument(t.Context(), document.Path)
@@ -47,6 +47,9 @@ func TestDocuments(t *testing.T) {
 	d2, err := vectorDB.LookupDocument(t.Context(), document.Path)
 	require.NoError(t, err)
 	require.Equal(t, document, d2)
+
+	err = vectorDB.TouchDocument(t.Context(), document)
+	require.NoError(t, err)
 
 	count, err := vectorDB.CountDocuments(t.Context(), nil)
 	require.NoError(t, err)

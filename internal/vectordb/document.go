@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/qdrant/go-client/qdrant"
@@ -68,10 +69,29 @@ func (s *Store) UpsertDocument(ctx context.Context, document *domain.Document) e
 		Points: []*qdrant.PointStruct{
 			point,
 		},
+		Wait: &waitAlways,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to upsert document '%s' (cause: %w)", document.Path, err)
 	}
+	return nil
+}
+
+func (s *Store) TouchDocument(ctx context.Context, document *domain.Document) error {
+	collectionName := s.collectionName(documentsCollection)
+	s.logger.Info("touching document...", slog.String("collection", collectionName))
+	now := domain.Timestamp(time.Now())
+	_, err := s.client.SetPayload(ctx, &qdrant.SetPayloadPoints{
+		CollectionName: collectionName,
+		Payload: qdrant.NewValueMap(map[string]any{
+			"last_sync": encodeDatetime(now),
+		}),
+		PointsSelector: qdrant.NewPointsSelector(qdrant.NewIDUUID(document.ID)),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to touch document '%s' (cause: %w)", document.Path, err)
+	}
+	document.LastSync = now
 	return nil
 }
 
