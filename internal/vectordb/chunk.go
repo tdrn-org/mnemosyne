@@ -66,6 +66,7 @@ func (s *Store) UpsertChunk(ctx context.Context, chunk *domain.Chunk, embedding 
 		Points: []*qdrant.PointStruct{
 			point,
 		},
+		Wait: &waitAlways,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to upsert chunk '%s' (cause: %w)", chunk.DocumentTitle, err)

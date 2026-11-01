@@ -87,6 +87,7 @@ func (s *Store) TouchDocument(ctx context.Context, document *domain.Document) er
 			"last_sync": encodeDatetime(now),
 		}),
 		PointsSelector: qdrant.NewPointsSelector(qdrant.NewIDUUID(document.ID)),
+		Wait:           &waitAlways,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to touch document '%s' (cause: %w)", document.Path, err)
