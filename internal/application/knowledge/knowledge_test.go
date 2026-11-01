@@ -75,4 +75,4 @@ type noopMetricsRecorder struct{}
 func (*noopMetricsRecorder) ObserveDocumentCount(store string, count uint64)           {}
 func (*noopMetricsRecorder) ObserveChunkCount(store string, count uint64)              {}
 func (*noopMetricsRecorder) ObserveSearch(store string, results int, topScore float64) {}
-func (*noopMetricsRecorder) ObserveRead(store string)                                  {}
+func (*noopMetricsRecorder) ObserveRead(store string, found bool)                      {}

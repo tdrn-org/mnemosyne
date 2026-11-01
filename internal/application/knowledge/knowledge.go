@@ -54,8 +54,8 @@ type Knowledge struct {
 }
 
 // MetricsRecorder receives search and read observations. Implementations must be
-// safe for concurrent use. A nil recorder disables instrumentation, which keeps
-// this package free of any metrics dependency.
+// safe for concurrent use and must not be nil: pass a no-op implementation to
+// disable instrumentation. This keeps the package free of any metrics dependency.
 type MetricsRecorder interface {
 	// ObserveDocumentCount reports an updated document count for the given store.
 	ObserveDocumentCount(store string, count uint64)
@@ -64,8 +64,9 @@ type MetricsRecorder interface {
 	// ObserveSearch reports one completed search: the number of chunks found and
 	// the best similarity score among them (0 when nothing was found).
 	ObserveSearch(store string, results int, topScore float64)
-	// ObserveRead reports one completed document read.
-	ObserveRead(store string)
+	// ObserveRead reports one completed document read and whether the requested
+	// document was found.
+	ObserveRead(store string, found bool)
 }
 
 // AllStores is the store label used when a search is not scoped to a single store.
@@ -143,10 +144,11 @@ func (k *Knowledge) ReadDocument(ctx context.Context, store, path string, limit 
 				return "", err
 			}
 			if source == nil {
+				k.metricsRecorder.ObserveRead(store, false)
 				return "", nil
 			}
 			document := k.limitDocument(string(source), limit)
-			k.metricsRecorder.ObserveRead(store)
+			k.metricsRecorder.ObserveRead(store, true)
 			return document, nil
 		}
 	}

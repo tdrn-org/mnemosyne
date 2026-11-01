@@ -89,8 +89,8 @@ func NewRecorder(registry *prometheus.Registry) *Recorder {
 		Namespace: Namespace,
 		Subsystem: SubsystemKnowledge,
 		Name:      "reads_total",
-		Help:      "Number of knowledge document reads, by store.",
-	}, []string{"store"})
+		Help:      "Number of knowledge document reads, by store and result (hit or miss).",
+	}, []string{"store", "result"})
 	return recorder
 }
 
@@ -128,12 +128,18 @@ func (r *Recorder) ObserveSearch(store string, results int, topScore float64) {
 	r.knowledgeSearchTopScore.WithLabelValues(store).Observe(topScore)
 }
 
-// ObserveRead implements knowledge.MetricsRecorder.
-func (r *Recorder) ObserveRead(store string) {
+// ObserveRead implements knowledge.MetricsRecorder. A read of a document that
+// does not exist counts as a miss, so hit and miss together always equal the
+// number of reads performed.
+func (r *Recorder) ObserveRead(store string, found bool) {
 	if !r.enabled {
 		return
 	}
-	r.knowledgeReads.WithLabelValues(store).Inc()
+	result := ResultMiss
+	if found {
+		result = ResultHit
+	}
+	r.knowledgeReads.WithLabelValues(store, result).Inc()
 }
 
 func (r *Recorder) setGauge(name string, gaugeVec *prometheus.GaugeVec, value float64, labels ...string) {
