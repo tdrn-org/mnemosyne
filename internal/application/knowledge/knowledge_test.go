@@ -72,7 +72,7 @@ func testProvider(_ *testing.T) provider.Embedder {
 
 type noopMetricsRecorder struct{}
 
-func (_ *noopMetricsRecorder) ObserveDocumentCount(store string, count uint64)           {}
-func (_ *noopMetricsRecorder) ObserveChunkCount(store string, count uint64)              {}
-func (_ *noopMetricsRecorder) ObserveSearch(store string, results int, topScore float64) {}
-func (_ *noopMetricsRecorder) ObserveRead(store string)                                  {}
+func (*noopMetricsRecorder) ObserveDocumentCount(store string, count uint64)           {}
+func (*noopMetricsRecorder) ObserveChunkCount(store string, count uint64)              {}
+func (*noopMetricsRecorder) ObserveSearch(store string, results int, topScore float64) {}
+func (*noopMetricsRecorder) ObserveRead(store string)                                  {}
