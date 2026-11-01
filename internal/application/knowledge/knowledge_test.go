@@ -43,7 +43,7 @@ func TestKnowledgeSync(t *testing.T) {
 			},
 		},
 	}
-	knowledge := knowledge.NewKnowledge(t.Context(), cfg, store, tokenizer, embedder)
+	knowledge := knowledge.NewKnowledge(t.Context(), cfg, store, tokenizer, embedder, &noopMetricsRecorder{})
 	now := time.Now()
 	knowledge.Sync(t.Context(), now.Add(-time.Hour), now)
 }
@@ -69,3 +69,10 @@ func testConfig(t *testing.T) *config.VectorDBConfig {
 func testProvider(_ *testing.T) provider.Embedder {
 	return provider.NewDemoProvider(&config.DemoProviderConfig{EmbeddingDimension: 256})
 }
+
+type noopMetricsRecorder struct{}
+
+func (_ *noopMetricsRecorder) ObserveDocumentCount(store string, count uint64)           {}
+func (_ *noopMetricsRecorder) ObserveChunkCount(store string, count uint64)              {}
+func (_ *noopMetricsRecorder) ObserveSearch(store string, results int, topScore float64) {}
+func (_ *noopMetricsRecorder) ObserveRead(store string)                                  {}

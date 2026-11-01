@@ -21,7 +21,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
-	"github.com/tdrn-org/mnemosyne/internal/application/knowledge"
 )
 
 const Namespace string = "mnemosyne"
@@ -39,8 +38,6 @@ type Recorder struct {
 	enabled                 bool
 	knowledgeDocuments      *prometheus.GaugeVec
 	knowledgeChunks         *prometheus.GaugeVec
-	knowledgeSearchRequests prometheus.Counter
-	knowledgeReadRequests   prometheus.Counter
 	knowledgeSearches       *prometheus.CounterVec
 	knowledgeSearchResults  *prometheus.HistogramVec
 	knowledgeSearchTopScore *prometheus.HistogramVec
@@ -68,18 +65,6 @@ func NewRecorder(registry *prometheus.Registry) *Recorder {
 		Name:      "chunks",
 		Help:      "Number of chunks known to the knowledge store, by store.",
 	}, knowledgeLabels)
-	recorder.knowledgeSearchRequests = factory.NewCounter(prometheus.CounterOpts{
-		Namespace: Namespace,
-		Subsystem: SubsystemKnowledge,
-		Name:      "search_requests_total",
-		Help:      "Deprecated: total number of knowledge searches, superseded by searches_total.",
-	})
-	recorder.knowledgeReadRequests = factory.NewCounter(prometheus.CounterOpts{
-		Namespace: Namespace,
-		Subsystem: SubsystemKnowledge,
-		Name:      "read_requests_total",
-		Help:      "Deprecated: total number of knowledge reads, superseded by reads_total.",
-	})
 	recorder.knowledgeSearches = factory.NewCounterVec(prometheus.CounterOpts{
 		Namespace: Namespace,
 		Subsystem: SubsystemKnowledge,
@@ -109,6 +94,24 @@ func NewRecorder(registry *prometheus.Registry) *Recorder {
 	return recorder
 }
 
+// ObserveDocumentCount implements knowledge.MetricsRecorder.
+func (r *Recorder) ObserveDocumentCount(store string, count uint64) {
+	if !r.enabled {
+		return
+	}
+	knowledgeLabels := []string{store}
+	r.setGauge("current", r.knowledgeDocuments, float64(count), knowledgeLabels...)
+}
+
+// ObserveChunkCount implements knowledge.MetricsRecorder.
+func (r *Recorder) ObserveChunkCount(store string, count uint64) {
+	if !r.enabled {
+		return
+	}
+	knowledgeLabels := []string{store}
+	r.setGauge("current", r.knowledgeChunks, float64(count), knowledgeLabels...)
+}
+
 // ObserveSearch implements knowledge.MetricsRecorder. A search that returns no
 // chunks counts as a miss, so hit and miss together always equal the number of
 // searches performed.
@@ -131,23 +134,6 @@ func (r *Recorder) ObserveRead(store string) {
 		return
 	}
 	r.knowledgeReads.WithLabelValues(store).Inc()
-}
-
-func (r *Recorder) RecordKnowledgeStats(stats *knowledge.Stats) {
-	if !r.enabled {
-		return
-	}
-
-	for store, count := range stats.DocumentCounts {
-		knowledgeLabels := []string{store}
-		r.setGauge("current", r.knowledgeDocuments, float64(count), knowledgeLabels...)
-	}
-	for store, count := range stats.ChunkCounts {
-		knowledgeLabels := []string{store}
-		r.setGauge("current", r.knowledgeChunks, float64(count), knowledgeLabels...)
-	}
-	r.knowledgeSearchRequests.Add(float64(stats.SearchRequestsDelta))
-	r.knowledgeReadRequests.Add(float64(stats.ReadRequestsDelta))
 }
 
 func (r *Recorder) setGauge(name string, gaugeVec *prometheus.GaugeVec, value float64, labels ...string) {

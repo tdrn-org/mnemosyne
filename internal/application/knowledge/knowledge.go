@@ -27,7 +27,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"sync"
 	"text/template"
 	"time"
 	"unicode/utf8"
@@ -50,16 +49,18 @@ type Knowledge struct {
 	vectorDB        *vectordb.Store
 	embedder        provider.Embedder
 	markdownSyncs   []markdownSync
-	logger          *slog.Logger
-	stats           *Stats
 	metricsRecorder MetricsRecorder
-	mutex           sync.Mutex
+	logger          *slog.Logger
 }
 
 // MetricsRecorder receives search and read observations. Implementations must be
 // safe for concurrent use. A nil recorder disables instrumentation, which keeps
 // this package free of any metrics dependency.
 type MetricsRecorder interface {
+	// ObserveDocumentCount reports an updated document count for the given store.
+	ObserveDocumentCount(store string, count uint64)
+	// ObserveChunkCount reports an updated chunk count for the given store.
+	ObserveChunkCount(store string, count uint64)
 	// ObserveSearch reports one completed search: the number of chunks found and
 	// the best similarity score among them (0 when nothing was found).
 	ObserveSearch(store string, results int, topScore float64)
@@ -70,14 +71,7 @@ type MetricsRecorder interface {
 // AllStores is the store label used when a search is not scoped to a single store.
 const AllStores string = "all"
 
-type Stats struct {
-	DocumentCounts      map[string]uint64
-	ChunkCounts         map[string]uint64
-	SearchRequestsDelta uint64
-	ReadRequestsDelta   uint64
-}
-
-func NewKnowledge(ctx context.Context, cfg *config.KnowledgeConfig, vectorDB *vectordb.Store, tokenizer markdown.Tokenizer, embedder provider.Embedder) *Knowledge {
+func NewKnowledge(ctx context.Context, cfg *config.KnowledgeConfig, vectorDB *vectordb.Store, tokenizer markdown.Tokenizer, embedder provider.Embedder, metricsRecorder MetricsRecorder) *Knowledge {
 	logger := slog.With("collection", "knowledge")
 	markdownSyncs := make([]markdownSync, 0, len(cfg.MarkdownSources))
 	for _, markdownSource := range cfg.MarkdownSources {
@@ -90,34 +84,14 @@ func NewKnowledge(ctx context.Context, cfg *config.KnowledgeConfig, vectorDB *ve
 		})
 	}
 	k := &Knowledge{
-		vectorDB:      vectorDB,
-		embedder:      embedder,
-		markdownSyncs: markdownSyncs,
-		logger:        logger,
-		stats: &Stats{
-			DocumentCounts: make(map[string]uint64, len(markdownSyncs)),
-			ChunkCounts:    make(map[string]uint64, len(markdownSyncs)),
-		},
+		vectorDB:        vectorDB,
+		embedder:        embedder,
+		markdownSyncs:   markdownSyncs,
+		metricsRecorder: metricsRecorder,
+		logger:          logger,
 	}
-	k.initDocumentChunkCount(ctx)
+	k.observeDocumentChunkCount(ctx)
 	return k
-}
-
-func (k *Knowledge) Stats(resetDeltas bool) *Stats {
-	k.mutex.Lock()
-	defer k.mutex.Unlock()
-
-	stats := &Stats{
-		DocumentCounts:      maps.Clone(k.stats.DocumentCounts),
-		ChunkCounts:         maps.Clone(k.stats.ChunkCounts),
-		SearchRequestsDelta: k.stats.SearchRequestsDelta,
-		ReadRequestsDelta:   k.stats.ReadRequestsDelta,
-	}
-	if resetDeltas {
-		k.stats.SearchRequestsDelta = 0
-		k.stats.ReadRequestsDelta = 0
-	}
-	return stats
 }
 
 func (k *Knowledge) ListStores(_ context.Context) ([]string, error) {
@@ -140,35 +114,11 @@ func (k *Knowledge) SearchStore(ctx context.Context, query string, store *string
 	if err != nil {
 		return nil, fmt.Errorf("chunk search failure (cause: %w)", err)
 	}
-	k.recordSearchRequest()
 	k.observeSearch(store, chunks)
 	return chunks, nil
 }
 
-func (k *Knowledge) recordSearchRequest() {
-	k.mutex.Lock()
-	defer k.mutex.Unlock()
-
-	k.stats.SearchRequestsDelta++
-}
-
-// SetMetricsRecorder installs the recorder that receives search and read
-// observations. It may be called after construction, because the metrics
-// endpoint is set up later in the server start sequence.
-func (k *Knowledge) SetMetricsRecorder(recorder MetricsRecorder) {
-	k.mutex.Lock()
-	defer k.mutex.Unlock()
-
-	k.metricsRecorder = recorder
-}
-
 func (k *Knowledge) observeSearch(store *string, chunks []domain.Chunk) {
-	k.mutex.Lock()
-	recorder := k.metricsRecorder
-	k.mutex.Unlock()
-	if recorder == nil {
-		return
-	}
 	storeName := AllStores
 	if store != nil {
 		storeName = *store
@@ -182,7 +132,7 @@ func (k *Knowledge) observeSearch(store *string, chunks []domain.Chunk) {
 			}
 		}
 	}
-	recorder.ObserveSearch(storeName, len(chunks), topScore)
+	k.metricsRecorder.ObserveSearch(storeName, len(chunks), topScore)
 }
 
 func (k *Knowledge) ReadDocument(ctx context.Context, store, path string, limit *int) (string, error) {
@@ -196,29 +146,11 @@ func (k *Knowledge) ReadDocument(ctx context.Context, store, path string, limit 
 				return "", nil
 			}
 			document := k.limitDocument(string(source), limit)
-			k.recordReadRequest()
-			k.observeRead(store)
+			k.metricsRecorder.ObserveRead(store)
 			return document, nil
 		}
 	}
 	return "", fmt.Errorf("unknown store '%s'", store)
-}
-
-func (k *Knowledge) recordReadRequest() {
-	k.mutex.Lock()
-	defer k.mutex.Unlock()
-
-	k.stats.ReadRequestsDelta++
-}
-
-func (k *Knowledge) observeRead(store string) {
-	k.mutex.Lock()
-	recorder := k.metricsRecorder
-	k.mutex.Unlock()
-	if recorder == nil {
-		return
-	}
-	recorder.ObserveRead(store)
 }
 
 func (k *Knowledge) limitDocument(document string, limit *int) string {
@@ -248,40 +180,27 @@ func (k *Knowledge) Sync(ctx context.Context, last, now time.Time) error {
 			if syncErr != nil {
 				syncErrs = append(syncErrs, syncErr)
 			}
-			documentCount, err := k.vectorDB.CountDocuments(ctx, nil)
-			if err != nil {
-				k.logger.Error("failed to query document count", slog.Any("err", err))
-			}
-			chunkCount, err := k.vectorDB.CountChunks(ctx, nil)
-			if err != nil {
-				k.logger.Error("failed to query chunk count", slog.Any("err", err))
-			}
-			k.updateDocumentChunkCount(markdownSync.Cfg.Store, documentCount, chunkCount)
+			k.observeDocumentChunkCount(ctx)
 		}
 	}
 	return errors.Join(syncErrs...)
 }
 
-func (k *Knowledge) initDocumentChunkCount(ctx context.Context) {
+func (k *Knowledge) observeDocumentChunkCount(ctx context.Context) {
 	for _, markdownSync := range k.markdownSyncs {
 		documentCount, err := k.vectorDB.CountDocuments(ctx, nil)
-		if err != nil {
+		if err == nil {
+			k.metricsRecorder.ObserveDocumentCount(markdownSync.Cfg.Store, documentCount)
+		} else {
 			k.logger.Error("failed to query document count", slog.Any("err", err))
 		}
 		chunkCount, err := k.vectorDB.CountChunks(ctx, nil)
-		if err != nil {
+		if err == nil {
+			k.metricsRecorder.ObserveChunkCount(markdownSync.Cfg.Store, chunkCount)
+		} else {
 			k.logger.Error("failed to query chunk count", slog.Any("err", err))
 		}
-		k.updateDocumentChunkCount(markdownSync.Cfg.Store, documentCount, chunkCount)
 	}
-}
-
-func (k *Knowledge) updateDocumentChunkCount(store string, documentCount, chunkCount uint64) {
-	k.mutex.Lock()
-	defer k.mutex.Unlock()
-
-	k.stats.DocumentCounts[store] = documentCount
-	k.stats.ChunkCounts[store] = chunkCount
 }
 
 type markdownSync struct {

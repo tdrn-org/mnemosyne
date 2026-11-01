@@ -67,9 +67,9 @@ func StartServer(ctx context.Context, cfg *config.Config) (*Server, error) {
 		s.startProvider,
 		s.startVectorDB,
 		s.startHttpServer,
+		s.startMetrics,
 		s.startKnowledge,
 		s.startMemory,
-		s.startMetrics,
 		s.startMCPHandler,
 		s.startJobTicker,
 	}
@@ -188,27 +188,26 @@ func (s *Server) closeHttpServer() error {
 	return s.httpServer.Close()
 }
 
-func (s *Server) startKnowledge(ctx context.Context, cfg *config.Config) error {
-	tokenizer := &tokenizer.EstimateTokenizer{RunesPerToken: 4}
-	s.knowledge = knowledge.NewKnowledge(ctx, &cfg.Knowledge, s.vectorDB, tokenizer, s.embedder)
-	return nil
-}
-
-func (s *Server) startMemory(_ context.Context, cfg *config.Config) error {
-	s.memory = memory.NewMemory(&cfg.Memory, s.vectorDB, s.embedder)
-	return nil
-}
-
 func (s *Server) startMetrics(ctx context.Context, cfg *config.Config) error {
 	if cfg.Metrics.Enabled {
 		s.logger.Info("enabling metrics endpoint...", slog.String("path", cfg.Metrics.Path))
 		registry := prometheus.NewRegistry()
 		s.metricsRecorder = metrics.NewRecorder(registry)
-		s.knowledge.SetMetricsRecorder(s.metricsRecorder)
 		s.httpServer.Handle("GET "+cfg.Metrics.Path, promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
 	} else {
 		s.metricsRecorder = metrics.NewRecorder(nil)
 	}
+	return nil
+}
+
+func (s *Server) startKnowledge(ctx context.Context, cfg *config.Config) error {
+	tokenizer := &tokenizer.EstimateTokenizer{RunesPerToken: 4}
+	s.knowledge = knowledge.NewKnowledge(ctx, &cfg.Knowledge, s.vectorDB, tokenizer, s.embedder, s.metricsRecorder)
+	return nil
+}
+
+func (s *Server) startMemory(_ context.Context, cfg *config.Config) error {
+	s.memory = memory.NewMemory(&cfg.Memory, s.vectorDB, s.embedder)
 	return nil
 }
 
@@ -223,7 +222,6 @@ func (s *Server) startJobTicker(ctx context.Context, cfg *config.Config) error {
 	jobs := []jobticker.JobFunc{
 		s.knowledge.Sync,
 		s.memory.Sync,
-		s.collectMetrics,
 	}
 	s.jobTicker = jobticker.StartSequential(ctx, schedule, deadline, jobs...)
 	return nil
