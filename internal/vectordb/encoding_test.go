@@ -83,7 +83,7 @@ func TestMemoryEncodingOmitEmpty(t *testing.T) {
 		Content:   "a fact",
 		Type:      "fact",
 		Trust:     0.9,
-		ExpiresAt: time.Now().Add(24 * time.Hour),
+		ExpiresAt: domain.Timestamp(time.Now().Add(24 * time.Hour)),
 		Labels:    []string{"x", "y"},
 	}
 	point2, err := vectordb.EncodeToPoint(expiring)

@@ -14,20 +14,21 @@
  * limitations under the License.
  */
 
-package domain
+package domain_test
 
 import (
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tdrn-org/mnemosyne/internal/domain"
 )
 
 func TestMemoryTouchNever(t *testing.T) {
 	now := time.Now()
-	m := &Memory{
-		ExpiresAt:  time.Time{},
-		LastAccess: now.Add(-time.Hour),
+	m := &domain.Memory{
+		ExpiresAt:  domain.Timestamp(time.Time{}),
+		LastAccess: domain.Timestamp(now.Add(-time.Hour)),
 	}
 	m.Touch()
 	require.True(t, m.ExpiresAt.IsZero(), "never memory must keep zero ExpiresAt after Touch")
@@ -35,13 +36,14 @@ func TestMemoryTouchNever(t *testing.T) {
 }
 
 func TestMemoryTouchExpiring(t *testing.T) {
-	now := time.Now()
+	now := domain.Timestamp(time.Now())
 	ttl := 24 * time.Hour
-	m := &Memory{
+	m := &domain.Memory{
 		ExpiresAt:  now.Add(ttl),
 		LastAccess: now,
 	}
 	remainingBefore := m.ExpiresAt.Sub(m.LastAccess)
+	time.Sleep(5 * time.Second)
 	m.Touch()
 	remainingAfter := m.ExpiresAt.Sub(m.LastAccess)
 	require.Equal(t, remainingBefore, remainingAfter, "remaining TTL must be preserved")

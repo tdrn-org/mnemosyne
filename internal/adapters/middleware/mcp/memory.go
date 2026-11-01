@@ -77,8 +77,8 @@ func registerMemoryTools(server *mcp.Server, runtime Runtime) {
 			Type:       input.Type,
 			Trust:      trust,
 			Labels:     input.Labels,
-			CreatedAt:  now,
-			LastAccess: now,
+			CreatedAt:  domain.Timestamp(now),
+			LastAccess: domain.Timestamp(now),
 		}
 		err := runtime.Memory().RememberMemory(ctx, memory)
 		if err != nil {

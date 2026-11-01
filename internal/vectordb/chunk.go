@@ -73,6 +73,13 @@ func (s *Store) UpsertChunk(ctx context.Context, chunk *domain.Chunk, embedding 
 	return nil
 }
 
+func (s *Store) TouchChunk(ctx context.Context, chunk *domain.Chunk) error {
+	collectionName := s.collectionName(knowledgeCollection)
+	s.logger.Info("touching chunk...", slog.String("collection", collectionName))
+
+	return nil
+}
+
 func (s *Store) SearchChunks(ctx context.Context, store *string, limit *uint64, vector ...float32) ([]domain.Chunk, error) {
 	collectionName := s.collectionName(knowledgeCollection)
 	s.logger.Info("searching chunks...", slog.String("collection", collectionName))

@@ -15,3 +15,9 @@
  */
 
 package domain
+
+import "time"
+
+func Timestamp(t time.Time) time.Time {
+	return t.UTC().Truncate(time.Second)
+}

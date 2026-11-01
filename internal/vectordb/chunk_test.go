@@ -23,7 +23,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/tdrn-org/mnemosyne/internal/domain"
-	"github.com/tdrn-org/mnemosyne/internal/vectordb"
 )
 
 func TestChunks(t *testing.T) {
@@ -36,7 +35,7 @@ func TestChunks(t *testing.T) {
 		Path:          path,
 		ChunkIndex:    0,
 		ChunkHash:     "1234567890",
-		LastSync:      vectordb.Timestamp(time.Now()),
+		LastSync:      domain.Timestamp(time.Now()),
 		DocumentTitle: "A section about everything",
 		HeadingPath:   []string{"A documment about everything"},
 		Tags:          []string{},

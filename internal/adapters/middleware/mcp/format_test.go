@@ -48,7 +48,7 @@ func TestFormatMemoriesText(t *testing.T) {
 			Type:      "fact",
 			Trust:     0.9,
 			Labels:    []string{"tag"},
-			CreatedAt: time.Date(2026, 9, 14, 0, 0, 0, 0, time.UTC),
+			CreatedAt: domain.Timestamp(time.Date(2026, 9, 14, 0, 0, 0, 0, time.UTC)),
 		},
 	}
 	got := formatMemoriesText(mems)

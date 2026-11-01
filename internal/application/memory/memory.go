@@ -68,7 +68,7 @@ func (m *Memory) RememberMemory(ctx context.Context, memory *domain.Memory) erro
 	}
 	for _, memoryType := range m.cfg.Types {
 		if memory.Type == memoryType.Name && memoryType.TTL > 0 {
-			memory.ExpiresAt = memory.LastAccess.Add(time.Duration(memoryType.TTL))
+			memory.ExpiresAt = domain.Timestamp(memory.LastAccess.Add(time.Duration(memoryType.TTL)))
 		}
 	}
 	embedding, err := m.embedder.Embed(ctx, memory.Content)

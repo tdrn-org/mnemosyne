@@ -36,9 +36,9 @@ func TestMemories(t *testing.T) {
 		Content:    content,
 		Type:       typ,
 		Trust:      0.5,
-		CreatedAt:  now,
-		ExpiresAt:  now.Add(time.Hour),
-		LastAccess: now,
+		CreatedAt:  domain.Timestamp(now),
+		ExpiresAt:  domain.Timestamp(now.Add(time.Hour)),
+		LastAccess: domain.Timestamp(now),
 	}
 	vector, err := provider.Embed(t.Context(), memory.Content)
 	require.NoError(t, err)

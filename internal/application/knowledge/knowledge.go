@@ -185,7 +185,11 @@ func (k *Knowledge) Sync(ctx context.Context, last, now time.Time) error {
 			k.observeDocumentChunkCount(ctx)
 		}
 	}
-	return errors.Join(syncErrs...)
+	err := errors.Join(syncErrs...)
+	if err == nil {
+		//TODO: GC
+	}
+	return err
 }
 
 func (k *Knowledge) observeDocumentChunkCount(ctx context.Context) {
@@ -271,8 +275,13 @@ func (s *markdownSync) syncSource(ctx context.Context, path, relPath string, sou
 		return err
 	}
 	if document != nil && document.Path == relPath && document.Hash == sourceHash {
-		pathLogger.Debug("skipping unchanged Markdown file")
-		return nil
+		err = s.vectorDB.TouchDocument(ctx, document)
+		if err == nil {
+			pathLogger.Debug("skipping unchanged Markdown file")
+		} else {
+			pathLogger.Error("failed to touch document", slog.Any("err", err))
+		}
+		return err
 	}
 	tokenLimit := s.Cfg.ChunkTokenLimit
 	if tokenLimit == 0 {
@@ -293,7 +302,7 @@ func (s *markdownSync) syncSource(ctx context.Context, path, relPath string, sou
 		Store:    s.Cfg.Store,
 		Path:     relPath,
 		Hash:     sourceHash,
-		LastSync: vectordb.Timestamp(time.Now()),
+		LastSync: domain.Timestamp(time.Now()),
 	}
 	err = s.vectorDB.UpsertDocument(ctx, document)
 	if err != nil {
