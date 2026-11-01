@@ -17,6 +17,7 @@
 package vectordb_test
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -35,13 +36,16 @@ func testVectorDB(t *testing.T) (*vectordb.Store, provider.Embedder) {
 }
 
 func testConfig(t *testing.T) *config.VectorDBConfig {
-	t.SkipNow()
-	address := "localhost:6334"
+	address := os.Getenv("VECTORDB_ADDRESS")
+	tenant := os.Getenv("VECTORDB_TENANT")
+	if address == "" || tenant == "" {
+		t.Skip("VectorDB address/tenant not set; skipping tests")
+	}
 	return &config.VectorDBConfig{
 		Address:                address,
 		TLS:                    !strings.HasPrefix(address, "localhost"),
 		SkipCompatibilityCheck: true,
-		Tenant:                 "test",
+		Tenant:                 tenant,
 	}
 }
 
