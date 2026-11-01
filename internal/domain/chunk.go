@@ -31,6 +31,10 @@ type Chunk struct {
 	Tags          []string `json:"tags"`
 	Links         []string `json:"links"`
 	Content       string   `json:"content"`
+	// Score is the similarity of this chunk to the query that returned it.
+	// It is a transport-only value: filled in by the chunk store on search and
+	// never persisted (`json:"-"`), so it does not appear in the Qdrant payload.
+	Score float32 `json:"-"`
 }
 
 type ChunkStore interface {

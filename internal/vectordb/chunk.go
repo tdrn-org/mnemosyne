@@ -91,6 +91,7 @@ func (s *Store) SearchChunks(ctx context.Context, store *string, limit *uint64, 
 		if err != nil {
 			return nil, fmt.Errorf("failed to decode chunk query result (cause: %w)", err)
 		}
+		chunk.Score = float32(found.Score)
 		chunks = append(chunks, *chunk)
 	}
 	return chunks, nil

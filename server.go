@@ -204,6 +204,7 @@ func (s *Server) startMetrics(ctx context.Context, cfg *config.Config) error {
 		s.logger.Info("enabling metrics endpoint...", slog.String("path", cfg.Metrics.Path))
 		registry := prometheus.NewRegistry()
 		s.metricsRecorder = metrics.NewRecorder(registry)
+		s.knowledge.SetMetricsRecorder(s.metricsRecorder)
 		s.httpServer.Handle("GET "+cfg.Metrics.Path, promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
 	} else {
 		s.metricsRecorder = metrics.NewRecorder(nil)

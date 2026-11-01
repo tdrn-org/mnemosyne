@@ -47,13 +47,28 @@ covers in section {{join .HeadingPath " > "}}
 {{.Content}}`
 
 type Knowledge struct {
-	vectorDB      *vectordb.Store
-	embedder      provider.Embedder
-	markdownSyncs []markdownSync
-	logger        *slog.Logger
-	stats         *Stats
-	mutex         sync.Mutex
+	vectorDB        *vectordb.Store
+	embedder        provider.Embedder
+	markdownSyncs   []markdownSync
+	logger          *slog.Logger
+	stats           *Stats
+	metricsRecorder MetricsRecorder
+	mutex           sync.Mutex
 }
+
+// MetricsRecorder receives search and read observations. Implementations must be
+// safe for concurrent use. A nil recorder disables instrumentation, which keeps
+// this package free of any metrics dependency.
+type MetricsRecorder interface {
+	// ObserveSearch reports one completed search: the number of chunks found and
+	// the best similarity score among them (0 when nothing was found).
+	ObserveSearch(store string, results int, topScore float64)
+	// ObserveRead reports one completed document read.
+	ObserveRead(store string)
+}
+
+// AllStores is the store label used when a search is not scoped to a single store.
+const AllStores string = "all"
 
 type Stats struct {
 	DocumentCounts      map[string]uint64
@@ -126,6 +141,7 @@ func (k *Knowledge) SearchStore(ctx context.Context, query string, store *string
 		return nil, fmt.Errorf("chunk search failure (cause: %w)", err)
 	}
 	k.recordSearchRequest()
+	k.observeSearch(store, chunks)
 	return chunks, nil
 }
 
@@ -134,6 +150,39 @@ func (k *Knowledge) recordSearchRequest() {
 	defer k.mutex.Unlock()
 
 	k.stats.SearchRequestsDelta++
+}
+
+// SetMetricsRecorder installs the recorder that receives search and read
+// observations. It may be called after construction, because the metrics
+// endpoint is set up later in the server start sequence.
+func (k *Knowledge) SetMetricsRecorder(recorder MetricsRecorder) {
+	k.mutex.Lock()
+	defer k.mutex.Unlock()
+
+	k.metricsRecorder = recorder
+}
+
+func (k *Knowledge) observeSearch(store *string, chunks []domain.Chunk) {
+	k.mutex.Lock()
+	recorder := k.metricsRecorder
+	k.mutex.Unlock()
+	if recorder == nil {
+		return
+	}
+	storeName := AllStores
+	if store != nil {
+		storeName = *store
+	}
+	topScore := 0.0
+	if len(chunks) > 0 {
+		topScore = float64(chunks[0].Score)
+		for _, chunk := range chunks[1:] {
+			if score := float64(chunk.Score); score > topScore {
+				topScore = score
+			}
+		}
+	}
+	recorder.ObserveSearch(storeName, len(chunks), topScore)
 }
 
 func (k *Knowledge) ReadDocument(ctx context.Context, store, path string, limit *int) (string, error) {
@@ -148,6 +197,7 @@ func (k *Knowledge) ReadDocument(ctx context.Context, store, path string, limit 
 			}
 			document := k.limitDocument(string(source), limit)
 			k.recordReadRequest()
+			k.observeRead(store)
 			return document, nil
 		}
 	}
@@ -159,6 +209,16 @@ func (k *Knowledge) recordReadRequest() {
 	defer k.mutex.Unlock()
 
 	k.stats.ReadRequestsDelta++
+}
+
+func (k *Knowledge) observeRead(store string) {
+	k.mutex.Lock()
+	recorder := k.metricsRecorder
+	k.mutex.Unlock()
+	if recorder == nil {
+		return
+	}
+	recorder.ObserveRead(store)
 }
 
 func (k *Knowledge) limitDocument(document string, limit *int) string {
