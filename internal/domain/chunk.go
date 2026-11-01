@@ -18,19 +18,22 @@ package domain
 
 import (
 	"context"
+	"time"
 )
 
 type Chunk struct {
-	ID            string   `json:"id"`
-	Store         string   `json:"store"`
-	Path          string   `json:"path"`
-	ChunkIndex    int64    `json:"chunk_index"`
-	ChunkHash     string   `json:"chunk_hash"`
-	DocumentTitle string   `json:"document_title"`
-	HeadingPath   []string `json:"heading_path"`
-	Tags          []string `json:"tags"`
-	Links         []string `json:"links"`
-	Content       string   `json:"content"`
+	ID         string `json:"id"`
+	Store      string `json:"store"`
+	Path       string `json:"path"`
+	ChunkIndex int64  `json:"chunk_index"`
+	ChunkHash  string `json:"chunk_hash"`
+	// LastSync is updated every time this chunk is synched.
+	LastSync      time.Time `json:"last_sync"`
+	DocumentTitle string    `json:"document_title"`
+	HeadingPath   []string  `json:"heading_path"`
+	Tags          []string  `json:"tags"`
+	Links         []string  `json:"links"`
+	Content       string    `json:"content"`
 	// Score is the similarity of this chunk to the query that returned it.
 	// It is a transport-only value: filled in by the chunk store on search and
 	// never persisted (`json:"-"`), so it does not appear in the Qdrant payload.

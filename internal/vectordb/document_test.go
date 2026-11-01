@@ -18,6 +18,7 @@ package vectordb_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/tdrn-org/mnemosyne/internal/domain"
@@ -30,9 +31,10 @@ func TestDocuments(t *testing.T) {
 
 	path := "document.md"
 	document := &domain.Document{
-		ID:   vectordb.DocumentID(path),
-		Path: path,
-		Hash: "1234567890",
+		ID:       vectordb.DocumentID(path),
+		Path:     path,
+		Hash:     "1234567890",
+		LastSync: vectordb.Timestamp(time.Now()),
 	}
 
 	d1, err := vectorDB.LookupDocument(t.Context(), document.Path)

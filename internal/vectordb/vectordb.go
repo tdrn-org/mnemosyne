@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"net"
 	"strconv"
+	"time"
 
 	"github.com/qdrant/go-client/qdrant"
 	"github.com/tdrn-org/mnemosyne/config"
@@ -175,4 +176,8 @@ func (u *schemaUpdateFieldIndex) Apply(client *qdrant.Client, ctx context.Contex
 		}
 	}
 	return nil
+}
+
+func Timestamp(t time.Time) time.Time {
+	return t.UTC().Truncate(time.Second)
 }

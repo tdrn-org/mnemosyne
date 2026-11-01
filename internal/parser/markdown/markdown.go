@@ -21,10 +21,12 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/tdrn-org/mnemosyne/internal/crypto"
 	"github.com/tdrn-org/mnemosyne/internal/domain"
+	"github.com/tdrn-org/mnemosyne/internal/vectordb"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
 	"github.com/yuin/goldmark/parser"
@@ -225,6 +227,7 @@ func (a *chunkAggregator) addSectionFull(section *decodedSection) {
 		Path:          a.decoder.path,
 		ChunkIndex:    int64(len(a.chunks)),
 		ChunkHash:     chunkHash,
+		LastSync:      vectordb.Timestamp(time.Now()),
 		DocumentTitle: section.Title,
 		HeadingPath:   section.HeadingPath,
 		Tags:          make([]string, 0),
@@ -266,6 +269,7 @@ func (a *chunkAggregator) addSectionShallow(section *decodedSection) {
 		Path:          a.decoder.path,
 		ChunkIndex:    int64(len(a.chunks)),
 		ChunkHash:     chunkHash,
+		LastSync:      vectordb.Timestamp(time.Now()),
 		DocumentTitle: section.Title,
 		HeadingPath:   section.HeadingPath,
 		Tags:          make([]string, 0),

@@ -44,6 +44,12 @@ func (s *Store) knowledgeCollectionUpdates(dimension uint64, reset bool) []schem
 		FieldType:      qdrant.FieldType_FieldTypeKeyword.Enum(),
 		Reset:          reset,
 	})
+	updates = append(updates, &schemaUpdateFieldIndex{
+		CollectionName: collectionName,
+		FieldName:      "last_sync",
+		FieldType:      qdrant.FieldType_FieldTypeDatetime.Enum(),
+		Reset:          reset,
+	})
 	return updates
 }
 

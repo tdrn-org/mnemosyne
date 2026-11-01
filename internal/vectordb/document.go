@@ -36,6 +36,18 @@ func (s *Store) documentCollectionUpdates(reset bool) []schemaUpdate {
 		VectorsConfig:  qdrant.NewVectorsConfigMap(map[string]*qdrant.VectorParams{}),
 		Reset:          reset,
 	})
+	updates = append(updates, &schemaUpdateFieldIndex{
+		CollectionName: collectionName,
+		FieldName:      "store",
+		FieldType:      qdrant.FieldType_FieldTypeKeyword.Enum(),
+		Reset:          reset,
+	})
+	updates = append(updates, &schemaUpdateFieldIndex{
+		CollectionName: collectionName,
+		FieldName:      "last_sync",
+		FieldType:      qdrant.FieldType_FieldTypeDatetime.Enum(),
+		Reset:          reset,
+	})
 	return updates
 }
 
@@ -89,6 +101,9 @@ func (s *Store) CountDocuments(ctx context.Context, store *string) (uint64, erro
 	collectionName := s.collectionName(documentsCollection)
 	s.logger.Info("counting documents...", slog.String("collection", collectionName))
 	filter := &qdrant.Filter{}
+	if store != nil {
+		filter.Must = append(filter.Must, qdrant.NewMatch("store", *store))
+	}
 	exact := true
 	res, err := s.client.Count(ctx, &qdrant.CountPoints{
 		CollectionName: collectionName,

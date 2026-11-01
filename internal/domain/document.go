@@ -18,12 +18,16 @@ package domain
 
 import (
 	"context"
+	"time"
 )
 
 type Document struct {
-	ID   string `json:"id"`
-	Path string `json:"path"`
-	Hash string `json:"document_hash"`
+	ID    string `json:"id"`
+	Store string `json:"store"`
+	Path  string `json:"path"`
+	Hash  string `json:"document_hash"`
+	// LastSync is updated every time this chunk is synched.
+	LastSync time.Time `json:"last_sync"`
 }
 
 type DocumentStore interface {

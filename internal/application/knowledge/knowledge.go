@@ -232,7 +232,7 @@ func (s *markdownSync) FindDocument(ctx context.Context, documentPath string) ([
 }
 
 func (s *markdownSync) RunSync(ctx context.Context) error {
-	s.logger.Info("syncing source...")
+	s.logger.Info("syncing source...", slog.String("path", s.Cfg.Path))
 	err := filepath.WalkDir(s.Cfg.Path, func(path string, d fs.DirEntry, err error) error {
 		return s.walkSources(ctx, s.syncSource, path, d, err)
 	})
@@ -289,9 +289,11 @@ func (s *markdownSync) syncSource(ctx context.Context, path, relPath string, sou
 		return err
 	}
 	document = &domain.Document{
-		ID:   vectordb.DocumentID(relPath),
-		Path: relPath,
-		Hash: sourceHash,
+		ID:       vectordb.DocumentID(relPath),
+		Store:    s.Cfg.Store,
+		Path:     relPath,
+		Hash:     sourceHash,
+		LastSync: vectordb.Timestamp(time.Now()),
 	}
 	err = s.vectorDB.UpsertDocument(ctx, document)
 	if err != nil {
