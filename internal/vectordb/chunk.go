@@ -69,7 +69,7 @@ func (s *Store) UpsertChunk(ctx context.Context, chunk *domain.Chunk, embedding 
 
 func (s *Store) SearchChunks(ctx context.Context, store *string, limit *uint64, vector ...float32) ([]domain.Chunk, error) {
 	collectionName := s.collectionName(knowledgeCollection)
-	s.logger.Info("searching collection...", slog.String("collection", collectionName))
+	s.logger.Info("searching chunks...", slog.String("collection", collectionName))
 	filter := &qdrant.Filter{}
 	if store != nil {
 		filter.Must = append(filter.Must, qdrant.NewMatch("store", *store))
@@ -94,4 +94,23 @@ func (s *Store) SearchChunks(ctx context.Context, store *string, limit *uint64, 
 		chunks = append(chunks, *chunk)
 	}
 	return chunks, nil
+}
+
+func (s *Store) CountChunks(ctx context.Context, store *string) (uint64, error) {
+	collectionName := s.collectionName(knowledgeCollection)
+	s.logger.Info("counting chunks...", slog.String("collection", collectionName))
+	filter := &qdrant.Filter{}
+	if store != nil {
+		filter.Must = append(filter.Must, qdrant.NewMatch("store", *store))
+	}
+	exact := true
+	res, err := s.client.Count(ctx, &qdrant.CountPoints{
+		CollectionName: collectionName,
+		Filter:         filter,
+		Exact:          &exact,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to count chunks (cause: %w)", err)
+	}
+	return res, nil
 }

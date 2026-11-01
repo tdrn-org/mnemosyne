@@ -73,3 +73,7 @@ description = "Emotional moments that define the relationship. Never expires."
 name = "context"
 ttl = "168h"
 description = "Short-lived working context. Auto-expires when stale."
+
+[metrics]
+enabled = false
+path = "/metrics"

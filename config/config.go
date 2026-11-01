@@ -31,6 +31,7 @@ type Config struct {
 	Provider  ProviderConfig  `toml:"provider"`
 	Knowledge KnowledgeConfig `toml:"knowledge"`
 	Memory    MemoryConfig    `toml:"memory"`
+	Metrics   MetricsConfig   `toml:"metrics"`
 }
 
 //go:embed defaults.toml

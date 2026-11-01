@@ -43,7 +43,7 @@ func TestKnowledgeSync(t *testing.T) {
 			},
 		},
 	}
-	knowledge := knowledge.NewKnowledge(cfg, store, tokenizer, embedder)
+	knowledge := knowledge.NewKnowledge(t.Context(), cfg, store, tokenizer, embedder)
 	now := time.Now()
 	knowledge.Sync(t.Context(), now.Add(-time.Hour), now)
 }

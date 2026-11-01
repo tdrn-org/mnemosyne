@@ -49,4 +49,8 @@ func TestChunks(t *testing.T) {
 	chunks, err := vectorDB.SearchChunks(t.Context(), nil, nil, vector...)
 	require.NoError(t, err)
 	require.Len(t, chunks, 1)
+
+	count, err := vectorDB.CountChunks(t.Context(), nil)
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), count)
 }

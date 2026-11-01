@@ -18,6 +18,7 @@ package knowledge
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -26,6 +27,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 	"unicode/utf8"
@@ -49,9 +51,18 @@ type Knowledge struct {
 	embedder      provider.Embedder
 	markdownSyncs []markdownSync
 	logger        *slog.Logger
+	stats         *Stats
+	mutex         sync.Mutex
 }
 
-func NewKnowledge(cfg *config.KnowledgeConfig, vectorDB *vectordb.Store, tokenizer markdown.Tokenizer, embedder provider.Embedder) *Knowledge {
+type Stats struct {
+	DocumentCounts      map[string]uint64
+	ChunkCounts         map[string]uint64
+	SearchRequestsDelta uint64
+	ReadRequestsDelta   uint64
+}
+
+func NewKnowledge(ctx context.Context, cfg *config.KnowledgeConfig, vectorDB *vectordb.Store, tokenizer markdown.Tokenizer, embedder provider.Embedder) *Knowledge {
 	logger := slog.With("collection", "knowledge")
 	markdownSyncs := make([]markdownSync, 0, len(cfg.MarkdownSources))
 	for _, markdownSource := range cfg.MarkdownSources {
@@ -63,15 +74,36 @@ func NewKnowledge(cfg *config.KnowledgeConfig, vectorDB *vectordb.Store, tokeniz
 			logger:   logger.With(slog.String("source", fmt.Sprintf("markdown[%s]:%s", markdownSource.Nature, markdownSource.Path))),
 		})
 	}
-	return &Knowledge{
+	k := &Knowledge{
 		vectorDB:      vectorDB,
 		embedder:      embedder,
 		markdownSyncs: markdownSyncs,
 		logger:        logger,
+		stats: &Stats{
+			DocumentCounts: make(map[string]uint64, len(markdownSyncs)),
+			ChunkCounts:    make(map[string]uint64, len(markdownSyncs)),
+		},
 	}
+	k.initDocumentChunkCount(ctx)
+	return k
 }
 
-func (k *Knowledge) ListStores(ctx context.Context) ([]string, error) {
+func (k *Knowledge) Stats() *Stats {
+	k.mutex.Lock()
+	defer k.mutex.Unlock()
+
+	stats := &Stats{
+		DocumentCounts:      maps.Clone(k.stats.DocumentCounts),
+		ChunkCounts:         maps.Clone(k.stats.ChunkCounts),
+		SearchRequestsDelta: k.stats.SearchRequestsDelta,
+		ReadRequestsDelta:   k.stats.ReadRequestsDelta,
+	}
+	k.stats.SearchRequestsDelta = 0
+	k.stats.ReadRequestsDelta = 0
+	return stats
+}
+
+func (k *Knowledge) ListStores(_ context.Context) ([]string, error) {
 	storeMap := make(map[string]string)
 	for _, markdownSync := range k.markdownSyncs {
 		store := markdownSync.Parser.Store()
@@ -91,7 +123,15 @@ func (k *Knowledge) SearchStore(ctx context.Context, query string, store *string
 	if err != nil {
 		return nil, fmt.Errorf("chunk search failure (cause: %w)", err)
 	}
+	k.recordSearchRequest()
 	return chunks, nil
+}
+
+func (k *Knowledge) recordSearchRequest() {
+	k.mutex.Lock()
+	defer k.mutex.Unlock()
+
+	k.stats.SearchRequestsDelta++
 }
 
 func (k *Knowledge) ReadDocument(ctx context.Context, store, path string, limit *int) (string, error) {
@@ -105,10 +145,18 @@ func (k *Knowledge) ReadDocument(ctx context.Context, store, path string, limit 
 				return "", nil
 			}
 			document := k.limitDocument(string(source), limit)
+			k.recordReadRequest()
 			return document, nil
 		}
 	}
 	return "", fmt.Errorf("unknown store '%s'", store)
+}
+
+func (k *Knowledge) recordReadRequest() {
+	k.mutex.Lock()
+	defer k.mutex.Unlock()
+
+	k.stats.ReadRequestsDelta++
 }
 
 func (k *Knowledge) limitDocument(document string, limit *int) string {
@@ -131,12 +179,47 @@ func (k *Knowledge) limitDocument(document string, limit *int) string {
 
 func (k *Knowledge) Sync(ctx context.Context, last, now time.Time) error {
 	k.logger.Info("syncing sources...")
+	syncErrs := make([]error, 0, len(k.markdownSyncs))
 	for _, markdownSync := range k.markdownSyncs {
 		if markdownSync.Cfg.Schedule.InInterval(last, now) {
-			markdownSync.RunSync(ctx)
+			syncErr := markdownSync.RunSync(ctx)
+			if syncErr != nil {
+				syncErrs = append(syncErrs, syncErr)
+			}
+			documentCount, err := k.vectorDB.CountDocuments(ctx, nil)
+			if err != nil {
+				k.logger.Error("failed to query document count", slog.Any("err", err))
+			}
+			chunkCount, err := k.vectorDB.CountChunks(ctx, nil)
+			if err != nil {
+				k.logger.Error("failed to query chunk count", slog.Any("err", err))
+			}
+			k.updateDocumentChunkCount(markdownSync.Cfg.Store, documentCount, chunkCount)
 		}
 	}
-	return nil
+	return errors.Join(syncErrs...)
+}
+
+func (k *Knowledge) initDocumentChunkCount(ctx context.Context) {
+	for _, markdownSync := range k.markdownSyncs {
+		documentCount, err := k.vectorDB.CountDocuments(ctx, nil)
+		if err != nil {
+			k.logger.Error("failed to query document count", slog.Any("err", err))
+		}
+		chunkCount, err := k.vectorDB.CountChunks(ctx, nil)
+		if err != nil {
+			k.logger.Error("failed to query chunk count", slog.Any("err", err))
+		}
+		k.updateDocumentChunkCount(markdownSync.Cfg.Store, documentCount, chunkCount)
+	}
+}
+
+func (k *Knowledge) updateDocumentChunkCount(store string, documentCount, chunkCount uint64) {
+	k.mutex.Lock()
+	defer k.mutex.Unlock()
+
+	k.stats.DocumentCounts[store] = documentCount
+	k.stats.ChunkCounts[store] = chunkCount
 }
 
 type markdownSync struct {
@@ -165,7 +248,7 @@ func (s *markdownSync) FindDocument(ctx context.Context, documentPath string) ([
 	return foundSource, nil
 }
 
-func (s *markdownSync) RunSync(ctx context.Context) {
+func (s *markdownSync) RunSync(ctx context.Context) error {
 	s.logger.Info("syncing source...")
 	err := filepath.WalkDir(s.Cfg.Path, func(path string, d fs.DirEntry, err error) error {
 		return s.walkSources(ctx, s.syncSource, path, d, err)
@@ -173,6 +256,7 @@ func (s *markdownSync) RunSync(ctx context.Context) {
 	if err != nil {
 		s.logger.Error("failed to sync source", slog.Any("err", err))
 	}
+	return err
 }
 
 func (s *markdownSync) walkSources(ctx context.Context, fn func(context.Context, string, string, []byte) error, path string, d fs.DirEntry, err0 error) error {
@@ -181,7 +265,7 @@ func (s *markdownSync) walkSources(ctx context.Context, fn func(context.Context,
 	relPath, err := filepath.Rel(s.Cfg.Path, path)
 	if err != nil {
 		pathLogger.Warn("failed to resolve relative path of Markdown file", slog.Any("err", err))
-		return nil
+		return err
 	}
 	consider, err := s.considerPath(path, d, err0)
 	if !consider {
@@ -190,7 +274,7 @@ func (s *markdownSync) walkSources(ctx context.Context, fn func(context.Context,
 	source, err := os.ReadFile(path)
 	if err != nil {
 		pathLogger.Warn("failed to read Markdown file", slog.Any("err", err))
-		return nil
+		return err
 	}
 	return fn(ctx, path, relPath, source)
 }
@@ -201,7 +285,7 @@ func (s *markdownSync) syncSource(ctx context.Context, path, relPath string, sou
 	document, err := s.vectorDB.LookupDocument(ctx, relPath)
 	if err != nil {
 		pathLogger.Error("failed to lookup document", slog.Any("err", err))
-		return nil
+		return err
 	}
 	if document != nil && document.Path == relPath && document.Hash == sourceHash {
 		pathLogger.Debug("skipping unchanged Markdown file")
@@ -214,19 +298,22 @@ func (s *markdownSync) syncSource(ctx context.Context, path, relPath string, sou
 	chunks, err := s.Parser.Parse(relPath, source, tokenLimit)
 	if err != nil {
 		pathLogger.Error("failed to parse Markdown file", slog.Any("err", err))
-		return nil
+		return err
 	}
-	s.syncChunks(ctx, chunks)
+	err = s.syncChunks(ctx, chunks)
+	if err != nil {
+		pathLogger.Error("failed to sync chunks", slog.Any("err", err))
+		return err
+	}
 	document = &domain.Document{
 		ID:   vectordb.DocumentID(relPath),
 		Path: relPath,
 		Hash: sourceHash,
 	}
-	//TODO: Update hash only if all chunks are processed successfully
 	err = s.vectorDB.UpsertDocument(ctx, document)
 	if err != nil {
 		pathLogger.Error("failed to upsert document", slog.String("path", path), slog.Any("err", err))
-		return nil
+		return err
 	}
 	return nil
 }
@@ -256,24 +343,25 @@ func (s *markdownSync) considerPath(path string, d fs.DirEntry, err0 error) (boo
 	return true, nil
 }
 
-func (s *markdownSync) syncChunks(ctx context.Context, chunks []domain.Chunk) {
+func (s *markdownSync) syncChunks(ctx context.Context, chunks []domain.Chunk) error {
 	for _, chunk := range chunks {
 		chunkText, err := s.renderChunk(&chunk)
 		if err != nil {
-			s.logger.Warn("failed to render Markdown chunk", slog.Any("err", err))
-			continue
+			s.logger.Error("failed to render Markdown chunk", slog.Any("err", err))
+			return err
 		}
 		embedding, err := s.embedder.Embed(ctx, chunkText)
 		if err != nil {
-			s.logger.Warn("failed to generate embedding for Markdown chunk", slog.Any("err", err))
-			continue
+			s.logger.Error("failed to generate embedding for Markdown chunk", slog.Any("err", err))
+			return err
 		}
 		err = s.vectorDB.UpsertChunk(ctx, &chunk, embedding...)
 		if err != nil {
-			s.logger.Warn("failed to upsert Markdown chunk", slog.Any("err", err))
-			continue
+			s.logger.Error("failed to upsert Markdown chunk", slog.Any("err", err))
+			return err
 		}
 	}
+	return nil
 }
 
 func (s *markdownSync) renderChunk(chunk *domain.Chunk) (string, error) {

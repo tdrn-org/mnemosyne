@@ -25,10 +25,13 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/tdrn-org/go-httpserver"
 	"github.com/tdrn-org/go-jobticker"
 	"github.com/tdrn-org/mnemosyne/config"
 	"github.com/tdrn-org/mnemosyne/internal/adapters/middleware/mcp"
+	"github.com/tdrn-org/mnemosyne/internal/adapters/middleware/metrics"
 	"github.com/tdrn-org/mnemosyne/internal/application/knowledge"
 	"github.com/tdrn-org/mnemosyne/internal/application/memory"
 	"github.com/tdrn-org/mnemosyne/internal/provider"
@@ -40,15 +43,16 @@ import (
 const serverJobTickerSchedule time.Duration = 5 * time.Minute
 
 type Server struct {
-	cfg        *config.Config
-	httpServer *httpserver.Instance
-	baseURL    *url.URL
-	vectorDB   *vectordb.Store
-	embedder   provider.Embedder
-	knowledge  *knowledge.Knowledge
-	memory     *memory.Memory
-	jobTicker  *jobticker.SequentialQueue
-	logger     *slog.Logger
+	cfg             *config.Config
+	httpServer      *httpserver.Instance
+	baseURL         *url.URL
+	vectorDB        *vectordb.Store
+	embedder        provider.Embedder
+	knowledge       *knowledge.Knowledge
+	memory          *memory.Memory
+	metricsRecorder *metrics.Recorder
+	jobTicker       *jobticker.SequentialQueue
+	logger          *slog.Logger
 }
 
 func StartServer(ctx context.Context, cfg *config.Config) (*Server, error) {
@@ -65,6 +69,7 @@ func StartServer(ctx context.Context, cfg *config.Config) (*Server, error) {
 		s.startHttpServer,
 		s.startKnowledge,
 		s.startMemory,
+		s.startMetrics,
 		s.startMCPHandler,
 		s.startJobTicker,
 	}
@@ -183,14 +188,26 @@ func (s *Server) closeHttpServer() error {
 	return s.httpServer.Close()
 }
 
-func (s *Server) startKnowledge(_ context.Context, cfg *config.Config) error {
+func (s *Server) startKnowledge(ctx context.Context, cfg *config.Config) error {
 	tokenizer := &tokenizer.EstimateTokenizer{RunesPerToken: 4}
-	s.knowledge = knowledge.NewKnowledge(&cfg.Knowledge, s.vectorDB, tokenizer, s.embedder)
+	s.knowledge = knowledge.NewKnowledge(ctx, &cfg.Knowledge, s.vectorDB, tokenizer, s.embedder)
 	return nil
 }
 
 func (s *Server) startMemory(_ context.Context, cfg *config.Config) error {
 	s.memory = memory.NewMemory(&cfg.Memory, s.vectorDB, s.embedder)
+	return nil
+}
+
+func (s *Server) startMetrics(ctx context.Context, cfg *config.Config) error {
+	if cfg.Metrics.Enabled {
+		s.logger.Info("enabling metrics endpoint...", slog.String("path", cfg.Metrics.Path))
+		registry := prometheus.NewRegistry()
+		s.metricsRecorder = metrics.NewRecorder(registry)
+		s.httpServer.Handle("GET "+cfg.Metrics.Path, promhttp.HandlerFor(registry, promhttp.HandlerOpts{}))
+	} else {
+		s.metricsRecorder = metrics.NewRecorder(nil)
+	}
 	return nil
 }
 
@@ -205,6 +222,7 @@ func (s *Server) startJobTicker(ctx context.Context, cfg *config.Config) error {
 	jobs := []jobticker.JobFunc{
 		s.knowledge.Sync,
 		s.memory.Sync,
+		s.collectMetrics,
 	}
 	s.jobTicker = jobticker.StartSequential(ctx, schedule, deadline, jobs...)
 	return nil

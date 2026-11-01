@@ -45,4 +45,8 @@ func TestDocuments(t *testing.T) {
 	d2, err := vectorDB.LookupDocument(t.Context(), document.Path)
 	require.NoError(t, err)
 	require.Equal(t, document, d2)
+
+	count, err := vectorDB.CountDocuments(t.Context(), nil)
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), count)
 }

@@ -73,3 +73,7 @@
 #name = "context"
 #ttl = "168h"
 #description = "Short-lived working context. Auto-expires when stale."
+
+#[metrics]
+#enabled = false
+#path = "/metrics"

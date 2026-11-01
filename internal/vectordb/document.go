@@ -19,6 +19,7 @@ package vectordb
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/qdrant/go-client/qdrant"
@@ -43,13 +44,15 @@ func DocumentID(path string) string {
 }
 
 func (s *Store) UpsertDocument(ctx context.Context, document *domain.Document) error {
+	collectionName := s.collectionName(documentsCollection)
+	s.logger.Info("upserting document...", slog.String("collection", collectionName))
 	point, err := EncodeToPoint(document)
 	if err != nil {
 		return err
 	}
 	point.Vectors = qdrant.NewVectorsMap(map[string]*qdrant.Vector{})
 	_, err = s.client.Upsert(ctx, &qdrant.UpsertPoints{
-		CollectionName: s.collectionName(documentsCollection),
+		CollectionName: collectionName,
 		Points: []*qdrant.PointStruct{
 			point,
 		},
@@ -61,8 +64,10 @@ func (s *Store) UpsertDocument(ctx context.Context, document *domain.Document) e
 }
 
 func (s *Store) LookupDocument(ctx context.Context, path string) (*domain.Document, error) {
+	collectionName := s.collectionName(documentsCollection)
+	s.logger.Info("looking up document...", slog.String("collection", collectionName))
 	res, err := s.client.Get(ctx, &qdrant.GetPoints{
-		CollectionName: s.collectionName(documentsCollection),
+		CollectionName: collectionName,
 		Ids:            []*qdrant.PointId{qdrant.NewID(DocumentID(path))},
 		WithPayload:    qdrant.NewWithPayload(true),
 	})
@@ -78,4 +83,20 @@ func (s *Store) LookupDocument(ctx context.Context, path string) (*domain.Docume
 		return nil, err
 	}
 	return document, nil
+}
+
+func (s *Store) CountDocuments(ctx context.Context, store *string) (uint64, error) {
+	collectionName := s.collectionName(documentsCollection)
+	s.logger.Info("counting documents...", slog.String("collection", collectionName))
+	filter := &qdrant.Filter{}
+	exact := true
+	res, err := s.client.Count(ctx, &qdrant.CountPoints{
+		CollectionName: collectionName,
+		Filter:         filter,
+		Exact:          &exact,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to count documents (cause: %w)", err)
+	}
+	return res, nil
 }
