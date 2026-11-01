@@ -24,6 +24,6 @@ import (
 func (s *Server) collectMetrics(ctx context.Context, last, now time.Time) error {
 	s.logger.Info("collecting metrics...")
 
-	s.metricsRecorder.RecordKnowledgeStats(s.knowledge.Stats())
+	s.metricsRecorder.RecordKnowledgeStats(s.knowledge.Stats(s.cfg.Metrics.Enabled))
 	return nil
 }

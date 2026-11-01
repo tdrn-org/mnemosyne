@@ -88,7 +88,7 @@ func NewKnowledge(ctx context.Context, cfg *config.KnowledgeConfig, vectorDB *ve
 	return k
 }
 
-func (k *Knowledge) Stats() *Stats {
+func (k *Knowledge) Stats(resetDeltas bool) *Stats {
 	k.mutex.Lock()
 	defer k.mutex.Unlock()
 
@@ -98,8 +98,10 @@ func (k *Knowledge) Stats() *Stats {
 		SearchRequestsDelta: k.stats.SearchRequestsDelta,
 		ReadRequestsDelta:   k.stats.ReadRequestsDelta,
 	}
-	k.stats.SearchRequestsDelta = 0
-	k.stats.ReadRequestsDelta = 0
+	if resetDeltas {
+		k.stats.SearchRequestsDelta = 0
+		k.stats.ReadRequestsDelta = 0
+	}
 	return stats
 }
 
