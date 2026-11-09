@@ -42,6 +42,11 @@ type Recorder struct {
 	knowledgeSearchResults  *prometheus.HistogramVec
 	knowledgeSearchTopScore *prometheus.HistogramVec
 	knowledgeReads          *prometheus.CounterVec
+	memorySearches          *prometheus.CounterVec
+	memorySearchResults     *prometheus.HistogramVec
+	memoryWrites            *prometheus.CounterVec
+	memoryDeletes           prometheus.Counter
+	memoryTouches           prometheus.Counter
 }
 
 func NewRecorder(registry *prometheus.Registry) *Recorder {
@@ -91,6 +96,37 @@ func NewRecorder(registry *prometheus.Registry) *Recorder {
 		Name:      "reads_total",
 		Help:      "Number of knowledge document reads, by store and result (hit or miss).",
 	}, []string{"store", "result"})
+	recorder.memorySearches = factory.NewCounterVec(prometheus.CounterOpts{
+		Namespace: Namespace,
+		Subsystem: SubsystemMemory,
+		Name:      "searches_total",
+		Help:      "Number of memory recalls, by memory type and result (hit or miss).",
+	}, []string{"type", "result"})
+	recorder.memorySearchResults = factory.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: Namespace,
+		Subsystem: SubsystemMemory,
+		Name:      "search_results",
+		Help:      "Number of memories returned by a recall, by memory type.",
+		Buckets:   []float64{0, 1, 2, 3, 5, 10, 25},
+	}, []string{"type"})
+	recorder.memoryWrites = factory.NewCounterVec(prometheus.CounterOpts{
+		Namespace: Namespace,
+		Subsystem: SubsystemMemory,
+		Name:      "writes_total",
+		Help:      "Number of memories stored, by memory type.",
+	}, []string{"type"})
+	recorder.memoryDeletes = factory.NewCounter(prometheus.CounterOpts{
+		Namespace: Namespace,
+		Subsystem: SubsystemMemory,
+		Name:      "deletes_total",
+		Help:      "Number of memories deleted.",
+	})
+	recorder.memoryTouches = factory.NewCounter(prometheus.CounterOpts{
+		Namespace: Namespace,
+		Subsystem: SubsystemMemory,
+		Name:      "touches_total",
+		Help:      "Number of memory trust reinforcements and access touches.",
+	})
 	return recorder
 }
 
@@ -140,6 +176,45 @@ func (r *Recorder) ObserveRead(store string, found bool) {
 		result = ResultHit
 	}
 	r.knowledgeReads.WithLabelValues(store, result).Inc()
+}
+
+// ObserveRecall implements memory.MetricsRecorder. A recall that returns no
+// memories counts as a miss, so hit and miss together always equal the number
+// of recalls performed.
+func (r *Recorder) ObserveRecall(memoryType string, results int) {
+	if !r.enabled {
+		return
+	}
+	result := ResultMiss
+	if results > 0 {
+		result = ResultHit
+	}
+	r.memorySearches.WithLabelValues(memoryType, result).Inc()
+	r.memorySearchResults.WithLabelValues(memoryType).Observe(float64(results))
+}
+
+// ObserveWrite implements memory.MetricsRecorder.
+func (r *Recorder) ObserveWrite(memoryType string) {
+	if !r.enabled {
+		return
+	}
+	r.memoryWrites.WithLabelValues(memoryType).Inc()
+}
+
+// ObserveDelete implements memory.MetricsRecorder.
+func (r *Recorder) ObserveDelete() {
+	if !r.enabled {
+		return
+	}
+	r.memoryDeletes.Inc()
+}
+
+// ObserveTouch implements memory.MetricsRecorder.
+func (r *Recorder) ObserveTouch() {
+	if !r.enabled {
+		return
+	}
+	r.memoryTouches.Inc()
 }
 
 func (r *Recorder) setGauge(name string, gaugeVec *prometheus.GaugeVec, value float64, labels ...string) {
