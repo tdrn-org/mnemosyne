@@ -30,20 +30,42 @@ import (
 	"github.com/tdrn-org/mnemosyne/internal/vectordb"
 )
 
-type Memory struct {
-	cfg      *config.MemoryConfig
-	vectorDB *vectordb.Store
-	embedder provider.Embedder
-	logger   *slog.Logger
+// AllMemoryTypes is the type label used when a search is not scoped to a single
+// memory type.
+const AllMemoryTypes string = "all"
+
+// MetricsRecorder receives search, write, delete and touch observations.
+// Implementations must be safe for concurrent use and must not be nil: pass a
+// no-op implementation to disable instrumentation. This keeps the package free
+// of any metrics dependency.
+type MetricsRecorder interface {
+	// ObserveRecall reports one completed recall: the number of memories found
+	// and the type filter that was applied (AllMemoryTypes when unscoped).
+	ObserveRecall(memoryType string, results int)
+	// ObserveWrite reports one completed remember operation for the given type.
+	ObserveWrite(memoryType string)
+	// ObserveDelete reports one completed forget operation.
+	ObserveDelete()
+	// ObserveTouch reports one completed trust reinforcement or access touch.
+	ObserveTouch()
 }
 
-func NewMemory(cfg *config.MemoryConfig, vectorDB *vectordb.Store, embedder provider.Embedder) *Memory {
+type Memory struct {
+	cfg             *config.MemoryConfig
+	vectorDB        *vectordb.Store
+	embedder        provider.Embedder
+	metricsRecorder MetricsRecorder
+	logger          *slog.Logger
+}
+
+func NewMemory(cfg *config.MemoryConfig, vectorDB *vectordb.Store, embedder provider.Embedder, metricsRecorder MetricsRecorder) *Memory {
 	logger := slog.With("collection", "memory")
 	return &Memory{
-		cfg:      cfg,
-		vectorDB: vectorDB,
-		embedder: embedder,
-		logger:   logger,
+		cfg:             cfg,
+		vectorDB:        vectorDB,
+		embedder:        embedder,
+		metricsRecorder: metricsRecorder,
+		logger:          logger,
 	}
 }
 
@@ -75,11 +97,21 @@ func (m *Memory) RememberMemory(ctx context.Context, memory *domain.Memory) erro
 	if err != nil {
 		return fmt.Errorf("failed to generate embedding for memory (cause: %w)", err)
 	}
-	return m.vectorDB.UpsertMemory(ctx, memory, embedding...)
+	err = m.vectorDB.UpsertMemory(ctx, memory, embedding...)
+	if err != nil {
+		return err
+	}
+	m.metricsRecorder.ObserveWrite(memory.Type)
+	return nil
 }
 
 func (m *Memory) ForgetMemory(ctx context.Context, id string) error {
-	return m.vectorDB.DeleteMemory(ctx, id)
+	err := m.vectorDB.DeleteMemory(ctx, id)
+	if err != nil {
+		return err
+	}
+	m.metricsRecorder.ObserveDelete()
+	return nil
 }
 
 func (m *Memory) RecallMemories(ctx context.Context, query string, opts domain.RecallOptions) ([]domain.Memory, error) {
@@ -91,7 +123,19 @@ func (m *Memory) RecallMemories(ctx context.Context, query string, opts domain.R
 	if err != nil {
 		return nil, fmt.Errorf("memory search failure (cause: %w)", err)
 	}
+	m.observeSearch(opts.TypeFilter, memories)
 	return memories, nil
+}
+
+// observeSearch reports one completed recall. A recall that returns no memories
+// counts as a miss, so hit and miss together always equal the number of recalls
+// performed.
+func (m *Memory) observeSearch(typeFilter *string, memories []domain.Memory) {
+	memoryType := AllMemoryTypes
+	if typeFilter != nil {
+		memoryType = *typeFilter
+	}
+	m.metricsRecorder.ObserveRecall(memoryType, len(memories))
 }
 
 func (m *Memory) ReinforceMemory(ctx context.Context, id string, trustDelta float64) error {
@@ -104,7 +148,12 @@ func (m *Memory) ReinforceMemory(ctx context.Context, id string, trustDelta floa
 	}
 	memory.AdjustTrust(trustDelta)
 	memory.Touch()
-	return m.vectorDB.UpsertMemory(ctx, memory, vector...)
+	err = m.vectorDB.UpsertMemory(ctx, memory, vector...)
+	if err != nil {
+		return err
+	}
+	m.metricsRecorder.ObserveTouch()
+	return nil
 }
 
 func (m *Memory) TouchMemory(ctx context.Context, id string) error {
@@ -116,7 +165,12 @@ func (m *Memory) TouchMemory(ctx context.Context, id string) error {
 		return domain.ErrNoSuchMemory
 	}
 	memory.Touch()
-	return m.vectorDB.UpsertMemory(ctx, memory, vector...)
+	err = m.vectorDB.UpsertMemory(ctx, memory, vector...)
+	if err != nil {
+		return err
+	}
+	m.metricsRecorder.ObserveTouch()
+	return nil
 }
 
 func (m *Memory) Sync(ctx context.Context, last, now time.Time) error {

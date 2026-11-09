@@ -207,7 +207,7 @@ func (s *Server) startKnowledge(ctx context.Context, cfg *config.Config) error {
 }
 
 func (s *Server) startMemory(_ context.Context, cfg *config.Config) error {
-	s.memory = memory.NewMemory(&cfg.Memory, s.vectorDB, s.embedder)
+	s.memory = memory.NewMemory(&cfg.Memory, s.vectorDB, s.embedder, s.metricsRecorder)
 	return nil
 }
 
