@@ -15,14 +15,14 @@ require (
 	github.com/tdrn-org/go-config-toml v0.1.1
 	github.com/tdrn-org/go-diff v0.1.6
 	github.com/tdrn-org/go-httpserver v0.1.7
-	github.com/tdrn-org/go-jobticker v0.0.5
+	github.com/tdrn-org/go-jobticker v0.0.6
 	github.com/tdrn-org/go-log v0.6.4
 	github.com/yuin/goldmark v1.8.7
 	google.golang.org/protobuf v1.36.12
 )
 
 require (
-	github.com/adhocore/gronx v1.20.5 // indirect
+	github.com/adhocore/gronx v1.20.6 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/buger/jsonparser v1.6.1 // indirect

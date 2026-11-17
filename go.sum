@@ -1,5 +1,5 @@
-github.com/adhocore/gronx v1.20.5 h1:UgXvkD97Hovm7yA1TTRTd309o9F1h7C8gX04rktaxnE=
-github.com/adhocore/gronx v1.20.5/go.mod h1:7oUY1WAU8rEJWmAxXR2DN0JaO4gi9khSgKjiRypqteg=
+github.com/adhocore/gronx v1.20.6 h1:EQz4h9R+7EGafmPIISdBc3nLaRd45e7PZJBhLPTBTHI=
+github.com/adhocore/gronx v1.20.6/go.mod h1:7oUY1WAU8rEJWmAxXR2DN0JaO4gi9khSgKjiRypqteg=
 github.com/alecthomas/assert/v2 v2.11.0 h1:2Q9r3ki8+JYXvGsDyBXwH3LcJ+WK5D0gc5E8vS6K3D0=
 github.com/alecthomas/assert/v2 v2.11.0/go.mod h1:Bze95FyfUr7x34QZrjL+XP+0qgp/zg8yS+TtBj1WA3k=
 github.com/alecthomas/kong v1.17.0 h1:f52BVWChYMDkMkCoqkEWRuFOk/K4B5LO7xIijeLJRdk=
@@ -80,8 +80,8 @@ github.com/tdrn-org/go-diff v0.1.6 h1:BkUtmLu8wDhN3i2vTM0xf79XH8e5Fr1vhyrPpdiwaY
 github.com/tdrn-org/go-diff v0.1.6/go.mod h1:zJpE11Rlvvjw8Jw/QljhwAIgsyCclTO6ALF5myR+zpI=
 github.com/tdrn-org/go-httpserver v0.1.7 h1:h0FsOPQN3VnJ9PbAXAsR92Xx5CCEqjeLFnTAWyUpEjM=
 github.com/tdrn-org/go-httpserver v0.1.7/go.mod h1:g0ePyPycL3RfUIyD5us9oR+McSHVG1qh8GDAbwcXJRU=
-github.com/tdrn-org/go-jobticker v0.0.5 h1:BkPuwD9DZ8t3t5YTacBgJAE+j8wHt+KMDuqVv2K2Sac=
-github.com/tdrn-org/go-jobticker v0.0.5/go.mod h1:xnDpD9ozCBAuJnRXtco6o3dpO0qt8FJmew1e79/0FyM=
+github.com/tdrn-org/go-jobticker v0.0.6 h1:7JwbmKbGVaZ4gt6Vz7x2S0Ae4JeDtT3oSjg4m50smAw=
+github.com/tdrn-org/go-jobticker v0.0.6/go.mod h1:t1qXt+zs/h1RfkP/3iEmjzUm7AUgN5bRzjENllW33hc=
 github.com/tdrn-org/go-log v0.6.4 h1:AvpO/nizfq5O+wq6rJNocXG4HsIvsUAhgIG/MOg5LGI=
 github.com/tdrn-org/go-log v0.6.4/go.mod h1:BlnqMMnt1DwQjJZuxMy0qSffPttdv6ubcod6mgGBvzA=
 github.com/tdrn-org/go-tlsconf v0.0.15 h1:VscbpWYkvVY8fJf3ncGgFRRAmRQWTL1Uxr5JP9zRz2U=
