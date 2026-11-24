@@ -8,7 +8,7 @@ require (
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/ollama/ollama v0.40.16
 	github.com/prometheus/client_golang v1.25.0
-	github.com/qdrant/go-client v1.20.1
+	github.com/qdrant/go-client v1.20.2
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.12.1
 	github.com/tdrn-org/go-conf v0.0.10
